@@ -25,7 +25,11 @@ class RouterProvider {
 	 * @var array
 	 */
 	
-	private $routeCache = [];
+	private $routes = [];
+
+	private $otherwise = null;
+
+	private $currentRoute;
 
 	public function __construct()
 	{
@@ -36,17 +40,14 @@ class RouterProvider {
 	{
 		$router = new Router($request);
 
-		foreach ($this->routeCache as $route) {
+		foreach ($this->routes as $route) {
 			list($route, $handler) = $route;
 
-			if (!is_callable($handler)) {
-				$handler[0] = $injector->get($handler[0] . 'Controller');
-			}
-
-			$router->addRoute($route, function() use ($injector, $route) {
-
+			$router->addRoute($route, function($parameter) use ($injector, $handler) {
+				return $injector->invoke($handler, ['RouteParameter' => $parameter]);
 			});
 		}
+
 		return $router;
 	}
 
@@ -55,12 +56,33 @@ class RouterProvider {
 	 * 
 	 *
 	 * @param Route $route   [description]
-	 * @param array $handler [description]
+	 * 
+	 * @return self
 	 */
 	
-	public function addRoute(Route $route, array $handler)
+	public function when(Route $route)
 	{
-		$this->routeCache[] = [$route, $handler];
+		if (isset($this->currentRoute)) {
+			$this->then([function(){}]);
+		}
+
+		$this->currentRoute = $route;
+
+		return $this;
+	}
+
+	public function then($handler)
+	{
+		$this->routes[] = [$route, $handler];
+		unset($this->currentRoute);
+
+		return $this;
+	}
+
+	public function otherwise($handler) 
+	{
+		$this->otherwise = $handler;
+
 		return $this;
 	}
 }
