@@ -43,8 +43,8 @@ class RouterProvider {
 		foreach ($this->routes as $route) {
 			list($route, $handler) = $route;
 
-			$router->addRoute($route, function($parameter) use ($injector, $handler) {
-				return $injector->invoke($handler, ['RouteParameter' => $parameter]);
+			$router->addRoute($route, function($parameter, $request) use ($injector, $handler) {
+				return $injector->invoke($handler, ['RouteParameter' => $parameter, 'Request' => $request]);
 			});
 		}
 

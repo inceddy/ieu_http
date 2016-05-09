@@ -102,15 +102,11 @@ class Route {
 	}
 
 
-	public function test($url)
+	public function parse(Url $url)
 	{
-		/*
-		if (!Request::isMethod($this->methods)) {
-			return null;
-		}
-		*/
+		$path = $url->getPath();
 
-		if (preg_match($this->getRoutePattern(), $url, $matches) === 1) {
+		if (preg_match($this->getRoutePattern(), $path, $matches) === 1) {
 			$variables = [];
 			
 			for ($i = 1; $i < sizeof($matches); $i++) {

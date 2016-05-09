@@ -235,7 +235,7 @@ class Request {
      * 
      */
     
-    public static function getMethodName()
+    public function getMethodName()
     {
         return isset(self::$httpRequestMap[$this->getMethod()]) ? self::$httpRequestMap[$this->getMethod()] : 'unknown';
     }
@@ -251,9 +251,9 @@ class Request {
      * 
      */
     
-    public static function isMethod($method)
+    public function isMethod($method)
     {
-        return $method & self::getMethod();
+        return $method & $this->getMethod();
     }
 
 

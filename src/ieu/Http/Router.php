@@ -42,11 +42,11 @@ class Router {
 			}
 
 			// Test for pathpattern
-			if (!$route->parse($this->request->getUri())) {
+			if (!$parameters = $route->parse($this->request->getUrl())) {
 				continue;
 			}
 
-			return call_user_func($handler, $this->route->getParameter(), $this->request);
+			return call_user_func($handler, $parameters, $this->request);
 		}
 
 		throw new \Exception('Route not found.');
