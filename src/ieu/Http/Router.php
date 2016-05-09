@@ -36,7 +36,7 @@ class Router {
 			list($route, $handler) = $route;
 
 			// Test for method
-			if (!$this->request->isMethod($route->getMethod())) {
+			if (!$this->request->isMethod($route->getMethods())) {
 				echo 'Wrong method';
 				continue;
 			}
