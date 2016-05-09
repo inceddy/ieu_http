@@ -73,7 +73,7 @@ class RouterProvider {
 
 	public function then($handler)
 	{
-		$this->routes[] = [$route, $handler];
+		$this->routes[] = [$this->currentRoute, $handler];
 		unset($this->currentRoute);
 
 		return $this;
