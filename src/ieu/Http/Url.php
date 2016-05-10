@@ -24,7 +24,6 @@ class Url {
 		21  => 'ftp',
 		80  => 'http',
 		443 => 'https',
-
 	];
 
 
@@ -158,7 +157,7 @@ class Url {
 
 	public function setPassword($password)
 	{
-		$this->pass = $pass;
+		$this->pass = $password;
 		return $this;
 	}
 

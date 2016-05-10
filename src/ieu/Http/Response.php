@@ -143,57 +143,136 @@ class Response
     const HTTP_VERSION_1_1 = 11;
     const HTTP_VERSION_2_0 = 20;
 
-    public static $protokollVersionMap = [
+    public static $protocolVersionMap = [
     	10 => 'HTTP/1.0',
     	11 => 'HTTP/1.1',
     	20 => 'HTTP/2.0' 
     ];
 
+
+    /**
+     * The HTTP protocol version (as listed above)
+     * @var string
+     */
+    
     private $protkollVersion;
 
+
+    /**
+     * The reponse status code
+     * @var integer
+     */
+    
     private $statusCode;
+
+
+    /**
+     * Response content/body
+     * @var string
+     */
+
 
     private $content;
 
-    private $header;
+    /**
+     * The headers
+     * @var ieu\Http\ParameterCollection
+     */
+    
+    private $headers;
 
 
+    /**
+     * Constructor
+     * Invokes a new HTTP response
+     *
+     * @param string  $content  The response body
+     * @param integer $code     The response code (as listed above)
+     * @param array   $headers  The header name-value-pairs to set
+     *
+     * @return self
+     * 
+     */
+    
 	public function __construct($content = null, $code = self::HTTP_OK, array $headers = [])
 	{
-		$this->headers = new ParmeterCollection();
+		$this->headers = new ParameterCollection();
 
 		$this->setContent($content);
 		$this->setStatusCode($code);
 		$this->setHeaders($headers);
 
-		$this->setProtokollVersion(self::HTTP_VERSION_1_1);
+		// By default set HTTP protocol version to 1.1
+        $this->setProtocolVersion(self::HTTP_VERSION_1_1);
 	}
 
-	public function setStatusCode($code)
+
+	/**
+     * Sets the HTTP status code
+     *
+     * @param integer $code  The status code
+     *
+     * @return self
+     * 
+     */
+    
+    public function setStatusCode($code)
 	{
 		if (!array_key_exists($code, self::$statusCodeMap)) {
 			throw new InvalidArgumentException(sprintf('The HTTP stauts code %s is unknown.', $code));
 		}
 
 		$this->code = $statusCode = $code;
+
 		return $this;
 	}
 
-	public function setProtokollVersion($version)
+
+    /**
+     * Sets the HTTP protocol version
+     *
+     * @param string $version The protocol version
+     *
+     * @return self
+     * 
+     */
+    
+	public function setProtocolVersion($version)
 	{
-		if (!array_key_exists(self::$protokollVersionMap, $version)) {
+		if (!array_key_exists(self::$protocolVersionMap, $version)) {
 			throw new InvalidArgumentException(sprintf('The HTTP protkoll version %s is unknown', $version));			
 		}
 
-		$this->protokollVersion = $version;
+		$this->protocolVersion = $version;
+
 		return $this;
 	}
 
+
+    /**
+     * Sets the body/content of this response
+     *
+     * @param mixed $content  The content
+     *
+     * @return self
+     * 
+     */
+    
 	public function setContent($content)
 	{
 		$this->content = $content;
 		return $this;
 	}
+
+
+    /**
+     * Sets an array of multiple headers.
+     *
+     * @param array $headers  The header name-value-pairs
+     *
+     * @return self
+     * 
+     */
 
 	public function setHeaders(array $headers)
 	{
@@ -204,12 +283,32 @@ class Response
 		return $this;
 	}
 
+
+    /**
+     * Sets a response header
+     *
+     * @param string $key     The header name
+     * @param mixed  $header  The header content
+     *
+     * @return self
+     *  
+     */
+    
 	public function setHeader($key, $header)
 	{
 		$this->headers->set($key, $header);
 		return $this;
 	}
 
+
+    /**
+     * Sends the response headers to the client
+     * if headers have not been send yet.
+     *
+     * @return self
+     * 
+     */
+    
 	public function sendHeaders()
 	{
 		// Early return if headers already have been send
@@ -226,7 +325,7 @@ class Response
 		}
 
 		header(sprintf('%s %s %s',
-			self::$protokollVersionMap[$this->protokollVersion],
+			self::$protocolVersionMap[$this->protocolVersion],
 			$this->statusCode,
 			self::$statusCodeMap[$this->statusCode]
 		));
@@ -234,13 +333,28 @@ class Response
 		return $this;
 	}
 
-	
+
+    /**
+     * Sends the response content to the client
+     *
+     * @return self
+     * 
+     */
+    
 	public function sendContent()
 	{
 		echo $this->content;
 		return $this;
 	}
 
+
+    /**
+     * Sends the response to the client
+     *
+     * @return self
+     * 
+     */
+    
 	public function send()
 	{
 		$this->sendHeaders();
@@ -250,11 +364,19 @@ class Response
 	}
 
 
+    /**
+     * Transform response to string.
+     * Useful for debugging.
+     *
+     * @return string
+     *
+     */
+    
 	public function __toString()
 	{
 		// HTTP header
 		return sprintf("%s %s %s\r\n",
-				self::$protokollVersionMap[$this->protokollVersion],
+				self::$protocolVersionMap[$this->protocolVersion],
 				$this->statusCode,
 				self::$statusCodeMap[$this->statusCode]
 			).

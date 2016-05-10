@@ -13,43 +13,71 @@ class Router {
 	private $url;
 
 	/**
-	 * All routes connected to this router
-	 * @var array
+	 * All handler routes bundles attachte to this router
+	 * @var array<array<callable, array<ieu\Http\Route>>> 
 	 */
 	
-	private $routes = [];
+	private $handlerAndRoutesCache = [];
+
+	private $currentRoutes = [];
 
 	public function __construct(Request $request)
 	{
 		$this->request = $request;
 	}
 
-	public function addRoute(Route $route, $handler)
+	/**
+	 * Sets the a new current route for this handler.
+	 *
+	 * @param  Route  $route [description]
+	 *
+	 * @return [type]        [description]
+	 */
+	
+	public function when(Route $route)
 	{
-		$this->routes[] = [$route, $handler];
+		$this->currentRoutes[] = $route;
+
+		return $this;
+	}
+
+	public function then(callable $handler)
+	{
+		$this->handlerAndRoutesCache[] = [$handler, $this->currentRoutes];
+		$this->currentRoutes = [];
+
 		return $this;
 	}
 
 	public function handle() 
 	{
-		foreach ($this->routes as $route) {
-			list($route, $handler) = $route;
+		// Loop over all handler routes bundles
+		foreach ($this->handlerAndRoutesCache as $handlerAndRoutes) {
+			list($handler, $routes) = $handlerAndRoutes;
 
-			// Test for method
-			if (!$this->request->isMethod($route->getMethods())) {
-				echo 'Wrong method';
-				continue;
+			// Loop over all routes for this handler
+			foreach ($routes as $route) {
+
+				// Test for method (eg. HTTP_GET, HTTP_POST, ...)
+				if (!$this->request->isMethod($route->getMethods())) {
+					echo 'Wrong method';
+					continue;
+				}
+
+				// Test for pathpattern
+				if (!$route->parse($this->request->getUrl())) {
+					continue;
+				}
+
+				return call_user_func($handler, $route->getParameterValues(), $this->request);
 			}
-
-			// Test for pathpattern
-			if (!$parameters = $route->parse($this->request->getUrl())) {
-				continue;
-			}
-
-			return call_user_func($handler, $parameters, $this->request);
 		}
 
-		throw new \Exception('Route not found.');
+		if ($this->hasDefaultHandler()) {
+			return call_user_func($this->getDefaultHandler(), $this->request);
+		}
+
+		throw new Exception('No matching route found.');
 	}
 }
 
