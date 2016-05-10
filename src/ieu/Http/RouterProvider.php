@@ -32,11 +32,11 @@ class RouterProvider {
 
 
 	/**
-	 * The currend route object
-	 * @var ieu\Http\Route
+	 * The currend route objects
+	 * @var array<ieu\Http\Route>
 	 */
 	
-	private $currentRoute;
+	private $currentRoutes = [];
 
 	/**
 	 * Constructor
@@ -67,9 +67,13 @@ class RouterProvider {
 		$router = new Router($request);
 
 		foreach ($this->routes as $route) {
-			list($route, $handler) = $route;
+			list($routes, $handler) = $route;
 
-			$router->addRoute($route, function($parameter, $request) use ($injector, $handler) {
+			foreach ($routes as $route) {
+				$this->router->when($route);
+			}
+
+			$this->router->then(function($parameter, $request) use ($injector, $handler) {
 				return $injector->invoke($handler, ['RouteParameter' => $parameter, 'Request' => $request]);
 			});
 		}
@@ -91,11 +95,7 @@ class RouterProvider {
 	
 	public function when(Route $route)
 	{
-		if (isset($this->currentRoute)) {
-			$this->then([function(){}]);
-		}
-
-		$this->currentRoute = $route;
+		$this->currentRoutes[] = $route;
 
 		return $this;
 	}
@@ -115,10 +115,11 @@ class RouterProvider {
 	
 	public function then($handler)
 	{
+		// Wrap handler in dependency array if nessesary
 		$handler = Container::getDependencyArray($handler);
 
-		$this->routes[] = [$this->currentRoute, $handler];
-		unset($this->currentRoute);
+		$this->routes[] = [$this->currentRoutes, $handler];
+		unset($this->currentRoutes);
 
 		return $this;
 	}

@@ -12,6 +12,7 @@ class Router {
 
 	private $url;
 
+
 	/**
 	 * All handler routes bundles attachte to this router
 	 * @var array<array<callable, array<ieu\Http\Route>>> 
@@ -26,12 +27,14 @@ class Router {
 		$this->request = $request;
 	}
 
+
 	/**
-	 * Sets the a new current route for this handler.
+	 * Adds a new current route for the next comming handler.
 	 *
-	 * @param  Route  $route [description]
+	 * @param  Route  $route  The route
 	 *
-	 * @return [type]        [description]
+	 * @return self
+	 * 
 	 */
 	
 	public function when(Route $route)
@@ -80,5 +83,3 @@ class Router {
 		throw new Exception('No matching route found.');
 	}
 }
-
-
