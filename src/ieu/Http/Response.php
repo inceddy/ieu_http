@@ -10,6 +10,7 @@
  */
 
 namespace ieu\Http;
+use InvalidArgumentException;
 
 class Response 
 {
@@ -248,7 +249,7 @@ class Response
     
 	public function setProtocolVersion($version)
 	{
-		if (!array_key_exists(self::$protocolVersionMap, $version)) {
+		if (!array_key_exists($version, self::$protocolVersionMap)) {
 			throw new InvalidArgumentException(sprintf('The HTTP protkoll version %s is unknown', $version));			
 		}
 
