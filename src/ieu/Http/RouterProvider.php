@@ -42,7 +42,7 @@ class RouterProvider {
 	 * @var array
 	 */
 	
-	private $otherwise = null;
+	private $otherwise;
 
 
 	/**
@@ -93,7 +93,10 @@ class RouterProvider {
 		}
 
 		if (isset($this->otherwise)) {
-			$router->otherwise();
+			$handler = $this->otherwise;
+			$router->otherwise(function($request) use ($injector, $handler) {
+				return $injector->invoke($handler, ['Request' => $request]);
+			});
 		}
 
 		return $router;
