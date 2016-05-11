@@ -141,6 +141,36 @@ class Router {
 
 
 	/**
+	 * Sets a default handler that is uses if no
+	 * route matches the request.
+	 *
+	 * @param  callable $defaultHandler The handler
+	 *
+	 * @return self
+	 * 
+	 */
+	
+	public function otherwise(callable $defaultHandler)
+	{
+		$this->defaultHandler = $defaultHandler;
+
+		return $this;
+	}
+
+
+	/**
+	 * Gets the default handler or null of no default handler is set.
+	 *
+	 * @return callable|null  The handler
+	 */
+	
+	public function getDefaultHandler()
+	{
+		return isset($this->defaultHandler) ? $this->defaultHandler : null;
+	}
+
+
+	/**
 	 * Trys to match a route against the current request.
 	 *
 	 * @throws Exception  if no route matches the request
@@ -172,10 +202,10 @@ class Router {
 			}
 		}
 
-		if ($this->hasDefaultHandler()) {
+		if (isset($this->defaultHandler)) {
 			return call_user_func($this->getDefaultHandler(), $this->request);
 		}
 
-		throw new Exception('No matching route found.');
+		throw new Exception('No matching route found. Set a default handler to cacht this case.');
 	}
 }
