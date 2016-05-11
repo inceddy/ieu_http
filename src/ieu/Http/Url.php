@@ -1,9 +1,9 @@
 <?php
 
 /*
- * This file is part of ieUtilities.
+ * This file is part of ieUtilities HTTP.
  *
- * (c) 2016 Philipp Steingrebe <philipp@steingrebe.de>
+ * (c) 2016 Philipp Steingrebe <development@steingrebe.de>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -14,7 +14,7 @@ use InvalidArgumentException;
 
 
 /**
- * Provides an object to handle the current request URL.
+ * Provides an object to handle the an URL.
  * @author Philipp Steingrebe <philipp@steingrebe.de>
  */
 
@@ -250,9 +250,19 @@ class Url {
 
 			return $this;
 		}
+
+
 	}
 
 
+	/**
+	 * [getPath description]
+	 *
+	 * @param  boolean $withFile [description]
+	 *
+	 * @return [type]            [description]
+	 */
+	
 	public function getPath($withFile = true)
 	{
 		return implode('/', $this->partials) . ($withFile ? '/' . $this->getFile() : ''); 

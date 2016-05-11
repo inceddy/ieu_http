@@ -1,10 +1,24 @@
 <?php
 
+/*
+ * This file is part of ieUtilities HTTP.
+ *
+ * (c) 2016 Philipp Steingrebe <development@steingrebe.de>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace ieu\Http;
 use ieu\Http\Reuqest;
 use ieu\Container\Injector;
-
 use ieu\Container\Container;
+
+
+/**
+ * The provider class for router object in an ieu\Container
+ */
+
 
 class RouterProvider {
 
@@ -70,12 +84,16 @@ class RouterProvider {
 			list($routes, $handler) = $route;
 
 			foreach ($routes as $route) {
-				$this->router->when($route);
+				$router->when($route);
 			}
 
-			$this->router->then(function($parameter, $request) use ($injector, $handler) {
+			$router->then(function($parameter, $request) use ($injector, $handler) {
 				return $injector->invoke($handler, ['RouteParameter' => $parameter, 'Request' => $request]);
 			});
+		}
+
+		if (isset($this->otherwise)) {
+			$router->otherwise();
 		}
 
 		return $router;
