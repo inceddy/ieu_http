@@ -202,12 +202,10 @@ class Url {
 	public function setQuery($query)
 	{
 		if (is_array($query)) {
-			$this->query = http_build_query($query);
+			$query = http_build_query($query);
 		}
 
-		elseif ($query) {
-			$this->query = $query;
-		}
+		$this->query = (string) $query;
 
 		return $this;
 	}
@@ -232,6 +230,16 @@ class Url {
 		return preg_match($pattern, $this->getPath()) === 1;
 	}
 
+
+	/**
+	 * Sets the URL path (file)
+	 *
+	 * @param string $path The path
+	 *
+	 * @return self
+	 * 
+	 */
+	
 	public function setPath($path)
 	{
 		if (is_string($path)) {
@@ -254,13 +262,13 @@ class Url {
 
 	}
 
-
 	/**
-	 * [getPath description]
+	 * Gets the full path of the url by default with file.
 	 *
-	 * @param  boolean $withFile [description]
+	 * @param  boolean $withFile Whether to append the file or not
 	 *
-	 * @return [type]            [description]
+	 * @return string
+	 * 
 	 */
 	
 	public function getPath($withFile = true)
@@ -274,32 +282,81 @@ class Url {
 		return $this;
 	}
 
+
+	/**
+	 * Gets the file of the URL if one is set
+	 *
+	 * @return string
+	 * 
+	 */
+	
 	public function getFile()
 	{
 		return $this->file;
 	}
 
+
+	/**
+	 * Gets the n'th path partial or null if the given offset is not set
+	 *
+	 * @param  integer $offset The offset to look for
+	 *
+	 * @return string|null
+	 * 
+	 */
+	
 	public function nth($offset)
 	{
 		return isset($this->partials[$offset]) ? $this->partials[$offset] : null;
 	}
 
+
+	/**
+	 * Gets the first path partial
+	 *
+	 * @return string
+	 * 
+	 */
+	
 	public function first() {
 		return $this->nth(0);
 	}
 
+	/**
+	 * Gets the last path partial
+	 *
+	 * @return string
+	 * 
+	 */
+	
 	public function last() {
 		return end($this->partials);
 	}
 
+
+	/**
+	 * Gets the mumber of partials in the path
+	 *
+	 * @return integer
+	 * 
+	 */
+	
 	public function length()
 	{
 		return sizeof($this->partials);
 	}
 
+
+	/**
+	 * Converts this object back to an URL string
+	 *
+	 * @return string
+	 * 
+	 */
+	
 	public function __toString()
 	{
-		$scheme = $hits->getScheme();
+		$scheme = $this->getScheme();
 		// Combine user and password
 		$user = $this->user ? ($this->pass ? $this->user . ':' . $this->pass . '@' : $this->user . '@') : '';
 		$host = $this->getHost();
@@ -328,17 +385,5 @@ class Url {
 			// Fragment
 			$fragment ? '#' . $fragment : ''
 		);
-	}
-
-	public static function instance($options = [])
-	{
-		static $instances = [];
-		$class = get_called_class();
-
-		if (!isset($instances[$class])) {
-			$instances[$class] = new static($options);
-		}
-
-		return $instances[$class];
 	}
 }

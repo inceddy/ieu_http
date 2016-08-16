@@ -165,7 +165,7 @@ class Response
      * @var string
      */
     
-    private $protkollVersion;
+    private $protocolVersion;
 
 
     /**
@@ -232,10 +232,36 @@ class Response
 			throw new InvalidArgumentException(sprintf('The HTTP stauts code %s is unknown.', $code));
 		}
 
-		$this->code = $statusCode = $code;
+		$this->statusCode = $code;
 
 		return $this;
 	}
+
+
+    /**
+     * Gets the current status code.
+     *
+     * @return integer
+     * 
+     */
+    
+    public function getStatusCode()
+    {
+        return $this->statusCode;
+    }
+
+
+    /**
+     * Gets the current status message
+     *
+     * @return string 
+     * 
+     */
+    
+    public function getStatusMessage()
+    {
+        return self::$statusCodeMap[$this->getStatusCode()];
+    }
 
 
     /**
@@ -257,6 +283,34 @@ class Response
 
 		return $this;
 	}
+
+
+    /**
+     * Gets the current protocol version
+     *
+     * @return integer
+     * 
+     */
+    
+    public function getProtocolVersion()
+    {
+        return $this->protocolVersion;
+    }
+
+
+    /**
+     * Gets the protocol name of the current HTTP protocol version
+     *
+     * @return string
+     * 
+     */
+    
+    public function getProtocolName()
+    {
+        return self::$protocolVersionMap[$this->getProtocolVersion()];
+    }
+
+
 
 
     /**
