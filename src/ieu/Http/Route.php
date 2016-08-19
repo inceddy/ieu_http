@@ -58,7 +58,7 @@ class Route {
 	 * @var boolean
 	 */
 	
-	protected $terminated;
+	protected $terminated = true;
 
 
 	/**
@@ -72,7 +72,14 @@ class Route {
 
 	public function __construct($route, $methods = Request::HTTP_ALL)
 	{
-		$this->route = trim($route, " \t\n\r/"); // Remove leading and tailing slashes and whitespaces
+		$route = trim($route, " \t\n\r/"); // Remove leading and tailing slashes and whitespaces
+
+		if (substr($route, -1) == '*') {
+			$route = substr($route, 0, -1);
+			$this->terminated(false);
+		}
+
+		$this->route = $route;
 		$this->methods = $methods;
 	}
 
@@ -82,10 +89,10 @@ class Route {
 			return $this->routePattern;
 		}
 
-		$this->routePattern = '~' . preg_replace_callback(self::VAR_PATTERN, function($matches) {
+		$this->routePattern = '~^' . preg_replace_callback(self::VAR_PATTERN, function($matches) {
 			$this->parameter[] = $key = $matches[1];
 			return '(' . (isset($this->parameterPattern[$key]) ? $this->parameterPattern[$key] : '\w+') . ')';
-		}, $this->route) . '~i';
+		}, $this->route) . ($this->terminated ? '$' : '') . '~i';
 
 		return $this->routePattern;
 	}
@@ -104,7 +111,7 @@ class Route {
 
 	public function parse(Url $url)
 	{
-		$path = $url->getPath();
+		$path = rtrim($url->getPath(), '/');
 
 		if (preg_match($this->getRoutePattern(), $path, $matches) === 1) {
 			$variables = [];
