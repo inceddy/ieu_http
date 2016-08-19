@@ -194,11 +194,11 @@ class Router {
 				}
 
 				// Test for pathpattern
-				if (!$route->parse($this->request->getUrl())) {
+				if (null === $parameter = $route->parse($this->request->getUrl())) {
 					continue;
 				}
 
-				return call_user_func($handler, $route->getParameterValues(), $this->request);
+				return call_user_func($handler, $parameter, $this->request);
 			}
 		}
 
