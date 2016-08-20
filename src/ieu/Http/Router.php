@@ -16,7 +16,7 @@ use LogicException;
 use Exception;
 
 /**
- * Class for routing http request
+ * Class for routing http requests
  */
 
 class Router {
@@ -57,7 +57,8 @@ class Router {
 	 * Constructor
 	 * Invokes a new router object
 	 *
-	 * @param Request $request  The request handled by this router
+	 * @param Request $request  
+	 *    The request handled by this router
 	 *
 	 * @return self
 	 * 
@@ -102,7 +103,8 @@ class Router {
 	/**
 	 * Adds a new current route for the next comming handler.
 	 *
-	 * @param  Route  $route  The route
+	 * @param  Route  $route  
+	 *    The route
 	 *
 	 * @return self
 	 * 
@@ -119,9 +121,11 @@ class Router {
 	/**
 	 * Sets the handler for the cached routes.
 	 *
-	 * @throws LogicException  if there is no route set, that might be handled
+	 * @throws \LogicException
+	 *    If there is no route set, that might be handled
 	 *
-	 * @param  callable $handler The handler
+	 * @param  callable $handler 
+	 *    The handler
 	 *
 	 * @return self
 	 * 
@@ -144,7 +148,8 @@ class Router {
 	 * Sets a default handler that is uses if no
 	 * route matches the request.
 	 *
-	 * @param  callable $defaultHandler The handler
+	 * @param  callable $defaultHandler 
+	 *    The handler
 	 *
 	 * @return self
 	 * 
@@ -161,7 +166,8 @@ class Router {
 	/**
 	 * Gets the default handler or null of no default handler is set.
 	 *
-	 * @return callable|null  The handler
+	 * @return callable|null  
+	 *    The handler
 	 */
 	
 	public function getDefaultHandler()
@@ -173,14 +179,17 @@ class Router {
 	/**
 	 * Trys to match a route against the current request.
 	 *
-	 * @throws Exception  if no route matches the request
+	 * @throws \Exception
+	 *    If no route matches the request
 	 *
-	 * @return mixed The response of the matching handler
+	 * @return \ieu\Http\Response
+	 *    The response of the matching handler
 	 * 
 	 */
 	
 	public function handle() 
 	{
+		// Exceptions caught while handling the routes
 		$errors = [];
 
 		// Loop over all handler routes bundles
