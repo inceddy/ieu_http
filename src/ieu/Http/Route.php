@@ -20,6 +20,7 @@ namespace ieu\Http;
 class Route {
 
 	const VAR_PATTERN = '/\{([a-z0-9\-_]+)\}/i';
+	const ALLOWED_CHARS = '[a-z0-9_\\.~\\-]+';
 
 	/**
 	 * Die Request-Methode, die diese Route bedient
@@ -91,7 +92,7 @@ class Route {
 
 		$this->routePattern = '~^' . preg_replace_callback(self::VAR_PATTERN, function($matches) {
 			$this->parameter[] = $key = $matches[1];
-			return '(' . (isset($this->parameterPattern[$key]) ? $this->parameterPattern[$key] : '\w+') . ')';
+			return '(' . (isset($this->parameterPattern[$key]) ? $this->parameterPattern[$key] : self::ALLOWED_CHARS) . ')';
 		}, $this->route) . ($this->terminated ? '$' : '') . '~i';
 
 		return $this->routePattern;
