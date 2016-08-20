@@ -20,7 +20,7 @@ namespace ieu\Http;
 class Route {
 
 	const VAR_PATTERN = '/\{([a-z0-9\-_]+)\}/i';
-	const ALLOWED_CHARS = '[a-z0-9_\\.~\\-]+';
+	const ALLOWED_CHARS = '[a-z0-9_\.~\-]+';
 
 	/**
 	 * Die Request-Methode, die diese Route bedient
