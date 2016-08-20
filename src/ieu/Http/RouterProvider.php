@@ -94,8 +94,8 @@ class RouterProvider {
 
 		if (isset($this->otherwise)) {
 			$handler = $this->otherwise;
-			$router->otherwise(function($request) use ($injector, $handler) {
-				return $injector->invoke($handler, ['Request' => $request]);
+			$router->otherwise(function($request, $errors) use ($injector, $handler) {
+				return $injector->invoke($handler, ['Request' => $request, 'Errors' => $errors]);
 			});
 		}
 
