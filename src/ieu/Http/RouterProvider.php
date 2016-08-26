@@ -52,6 +52,16 @@ class RouterProvider {
 	
 	private $currentRoutes = [];
 
+
+	/**
+	 * Variable pattern that are valid
+	 * for all Routes.
+	 *
+	 * @var [string]
+	 */
+	
+	private $globalPattern = [];
+
 	/**
 	 * Constructor
 	 * Invokes the new router provider
@@ -80,6 +90,7 @@ class RouterProvider {
 	{
 		$router = new Router($request);
 
+		// Set Routes
 		foreach ($this->routes as $route) {
 			list($routes, $handler) = $route;
 
@@ -92,6 +103,12 @@ class RouterProvider {
 			});
 		}
 
+		// Set global pattern
+		foreach ($this->globalPattern as $name => $pattern) {
+			$router->validate($name, $pattern);
+		}
+
+		// Set default handler
 		if (isset($this->otherwise)) {
 			$handler = $this->otherwise;
 			$router->otherwise(function($request, $errors) use ($injector, $handler) {
@@ -142,6 +159,25 @@ class RouterProvider {
 		$this->routes[] = [$this->currentRoutes, $handler];
 		unset($this->currentRoutes);
 
+		return $this;
+	}
+
+
+	/**
+	 * Sets a global variable pattern for the
+	 * given name.
+	 *
+	 * @param  string $name
+	 *     The variable name to validate
+	 * @param  string $pattern
+	 *     The pattern the variable must match
+	 *
+	 * @return self
+	 */
+	
+	public function validate($name, $pattern)
+	{
+		$this->globalPattern[$name] = $pattern;
 		return $this;
 	}
 

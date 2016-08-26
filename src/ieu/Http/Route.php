@@ -16,11 +16,16 @@ namespace ieu\Http;
  * @author Philipp Steingrebe <philipp@steingrebe.de>
  */
 
+function Route($routePattern)
+{
+	return new Route($routePattern);
+}
+
 
 class Route {
 
 	const VAR_PATTERN = '/\{([a-z0-9\-_]+)\}/i';
-	const ALLOWED_CHARS = '[a-z0-9_\.~\-]+';
+	const ALLOWED_CHARS = '[a-z0-9_\.\~\-]+';
 
 	/**
 	 * Die Request-Methode, die diese Route bedient
@@ -77,14 +82,14 @@ class Route {
 
 		if (substr($route, -1) == '*') {
 			$route = substr($route, 0, -1);
-			$this->terminated(false);
+			$this->setTermination(false);
 		}
 
 		$this->route = $route;
 		$this->methods = $methods;
 	}
 
-	public function getRoutePattern()
+	protected function getRoutePattern()
 	{
 		if (isset($this->routePattern)) {
 			return $this->routePattern;
@@ -110,6 +115,17 @@ class Route {
 	}
 
 
+	/**
+	 * Trys to extract all route variables of a given Url.
+	 * When the route doesen match the Url `null` will be returned.
+	 *
+	 * @param  Url    $url 
+	 *    The Url to parse
+	 *
+	 * @return [string]|null
+	 *    The array of route parameters or null if not matching
+	 */
+	
 	public function parse(Url $url)
 	{
 		$path = rtrim($url->getPath(), '/');
@@ -145,6 +161,15 @@ class Route {
 		return $this;
 	}
 
+
+	/**
+	 * Returns the valid HTTP request methods for this route
+	 * in binary decoded.
+	 *
+	 * @return integer
+	 *    The valid methods
+	 */
+	
 	public function getMethods()
 	{
 		return $this->methods;

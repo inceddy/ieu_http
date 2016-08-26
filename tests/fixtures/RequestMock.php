@@ -9,7 +9,7 @@ class RequestMock extends Request {
 
 	private $uri = '';
 
-	public static function isMethod($method)
+	public function isMethod($method)
 	{
 		return true;
 	}

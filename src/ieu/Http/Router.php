@@ -54,6 +54,17 @@ class Router {
 
 
 	/**
+	 * Variable pattern that are valid
+	 * for all Routes.
+	 *
+	 * @var [string]
+	 */
+	
+	private $globalPattern = [];
+	
+
+
+	/**
 	 * Constructor
 	 * Invokes a new router object
 	 *
@@ -145,6 +156,25 @@ class Router {
 
 
 	/**
+	 * Sets a global variable pattern for the
+	 * given name.
+	 *
+	 * @param  string $name
+	 *     The variable name to validate
+	 * @param  string $pattern
+	 *     The pattern the variable must match
+	 *
+	 * @return self
+	 */
+	
+	public function validate($name, $pattern)
+	{
+		$this->globalPattern[$name] = $pattern;
+		return $this;
+	}
+
+
+	/**
 	 * Sets a default handler that is uses if no
 	 * route matches the request.
 	 *
@@ -204,10 +234,18 @@ class Router {
 					continue;
 				}
 
-				// Test for pathpattern
+				// Test for local pattern
 				if (null === $parameter = $route->parse($this->request->getUrl())) {
 					continue;
 				}
+
+				// Test for global pattern
+				foreach (array_intersect_key($this->globalPattern, $parameter) as $name => $pattern) {
+					if (0 === preg_match('/' . $parameter . '/i' , $parameter[$name])) {
+						continue;
+					}
+				}
+					
 
 				try {
 					return call_user_func($handler, $parameter, $this->request);
@@ -222,5 +260,10 @@ class Router {
 		}
 
 		throw new Exception('No matching route found. Set a default handler to catch this case.');
+	}
+
+	public static function sanitizePattern($pattern)
+	{
+		
 	}
 }

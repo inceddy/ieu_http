@@ -7,45 +7,43 @@ use ieu\Http\Route;
  * @author  Philipp Steingrebe <philipp@steingrebe.de>
  */
 class RouteTest extends \PHPUnit_Framework_TestCase {
-	public function testRoute()
+
+	public function setUp()
 	{
-        $url = $this->getMockBuilder(ieu\Http\Url::CLASS)
-                    ->getMock();
+		$this->url = $this->getMockBuilder(ieu\Http\Url::CLASS)
+        	->getMock();
 
-        $url->method('uri')
-            ->willReturn('test/path');
-
-		$route = new Route('test/path/');
-		
-		var_dump($url->uri(), $route->getPathPattern());
-
-		$this->assertTrue($route->test($url));
+        $this->url->method('getPath')
+            ->willReturn('test/path/user123');
 	}
 
-	public function testRouteParameter()
+	public function testRouteIgnoresSlashes()
 	{
-        $url = $this->getMockBuilder(ieu\Http\Url::CLASS)
-                    ->getMock();
-
-        $url->method('uri')
-            ->willReturn('test/path/user123');
-
-		$route = new Route('test/path/{user}');
-
-		$this->assertTrue($route->test($url));
+		$route = new Route('/test/path/user123/');
+		$this->assertTrue(null !== $route->parse($this->url));
 	}
 
-	public function testRouteParameterValidation()
+	public function testRouteWildcard()
 	{
-        $url = $this->getMockBuilder(ieu\Http\Url::CLASS)
-                    ->getMock();
+		$route = new Route('test/path/*');
+		$this->assertTrue(null !== $route->parse($this->url));	
+	}
 
-        $url->method('uri')
-            ->willReturn('test/path/user123');
+	public function testRouteVariables()
+	{
+		$route = new Route('test/{path}/{user}');
+		$this->assertEquals(['path' => 'path', 'user' => 'user123'], $route->parse($this->url));
+	}
 
-		$route = (new Route('test/path/{user}'))
-		         ->validate('user', 'user[0-9]+');
+	public function testRouteVariableValidation()
+	{
+		$routeValid = (new Route('test/path/{user}'))
+			->validate('user', 'user\d+');
+		$this->assertEquals(['user' => 'user123'], $routeValid->parse($this->url));
 
-		$this->assertTrue($route->test($url));
+		// Invalid pattern
+		$routeInvalid = (new Route('test/path/{user}'))
+			->validate('user', 'customer\d+');
+		$this->assertEquals(null, $routeInvalid->parse($this->url));
 	}
 }
