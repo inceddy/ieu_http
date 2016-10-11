@@ -172,7 +172,8 @@ class Request {
 
 
     /**
-     * Shortcut to fetch a SESSION-parameter with optional default value  
+     * Shortcut to fetch a SESSION-parameter with optional default value.
+     * The function `session_start` must be called before initializing the Request object!
      *
      * @param  string $key     the key to look for
      * @param  mixed  $default the value thar will be returned if the key is not set
