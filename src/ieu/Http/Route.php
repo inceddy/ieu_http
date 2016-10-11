@@ -16,9 +16,9 @@ namespace ieu\Http;
  * @author Philipp Steingrebe <philipp@steingrebe.de>
  */
 
-function Route($routePattern)
+function Route($routePattern, $methods = Request::HTTP_ALL)
 {
-	return new Route($routePattern);
+	return new Route($routePattern, $methods);
 }
 
 
