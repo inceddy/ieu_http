@@ -267,6 +267,34 @@ class Request {
 
 
     /**
+     * Tests if request method is POST.
+     * Alias for Request::isMethod(Request::HTTP_POST).
+     *
+     * @return boolean
+     * 
+     */
+    
+    public function isMethodPost()
+    {
+        return $this->isMethod(self::HTTP_POST);
+    }
+
+
+    /**
+     * Tests if request method is GET.
+     * Alias for Request::isMethod(Request::HTTP_GET).
+     *
+     * @return boolean
+     * 
+     */
+
+    public function isMethodGet()
+    {
+        return $this->isMethod(self::HTTP_GET);
+    }
+
+
+    /**
      * Tries to detect if the server is running behind an SSL.
      *
      * @return boolean
