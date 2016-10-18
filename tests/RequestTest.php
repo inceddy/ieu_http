@@ -40,4 +40,8 @@ class RequestTest extends \PHPUnit_Framework_TestCase {
 		$request = new Request(['post' => ['test' => true]]);
 		$this->assertTrue($request->request('test'));
 	}
+
+	public function testSession()
+	{
+	}
 }

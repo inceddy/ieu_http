@@ -23,10 +23,10 @@ class ParameterCollection implements Countable, IteratorAggregate
 	
 	private $parameters;
 
-	public function __construct(array &$parameter)
+	public function __construct(array $parameter = [])
 	{
 
-		$this->parameters = &$parameter;
+		$this->parameters = $parameter;
 	}
 
 	public function has($key)

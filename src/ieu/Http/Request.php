@@ -54,11 +54,14 @@ class Request {
      * 
      */
 
-    public function __construct(array $parameters = [])
+    public function __construct(array $parameters = [], SessionInterface $session = null, CookieInterface $cookie = null)
     {
-        foreach (['get', 'post', 'files', 'cookie', 'session', 'server', 'header'] as $key) {
+        foreach (['get', 'post', 'files', 'server', 'header'] as $key) {
             $this->$key = new ParameterCollection(isset($parameters[$key]) ? $parameters[$key] : []);
         }
+
+        $this->session = $session ?: new Session();
+        $this->cookie = $cookie ?: new Cookie();
     }
 
 
@@ -78,9 +81,6 @@ class Request {
                 'get'     => $_GET, 
                 'post'    => $_POST, 
                 'files'   => $_FILES, 
-                'cookie'  => $_COOKIE, 
-                // Session must be started before!
-                'session' => session_status() === PHP_SESSION_ACTIVE ? $_SESSION : [], 
                 'server'  => $_SERVER, 
                 // Not allways available
                 'header'  => function_exists('getallheaders') ? getallheaders() : []
@@ -185,6 +185,18 @@ class Request {
     public function session($key, $default = null)
     {
         return $this->session->has($key) ? $this->session->get($key) : $default;
+    }
+
+    public function getSession()
+    {
+        return $this->session;
+    }
+
+    public function setSession(SessionInterface $session)
+    {
+        $this->session = $session;
+        
+        return $this;
     }
 
 
