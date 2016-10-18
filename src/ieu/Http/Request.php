@@ -101,7 +101,7 @@ class Request {
 
     public function __construct(array $parameters = [])
     {
-        foreach (['get', 'post', 'files', 'server', 'header', 'cookie'] as $key) {
+        foreach (['get', 'post', 'files', 'server', 'header', 'cookie', 'session'] as $key) {
             
             $parameter = isset($parameters[$key]) ? $parameters[$key] : null;
 
