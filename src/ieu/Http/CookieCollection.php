@@ -14,7 +14,7 @@ use Countable;
 use IteratorAggregate;
 use ArrayIterator;
 
-class Cookie implements Countable, IteratorAggregate
+class CookieCollection implements CookieCollectionInterface, Countable, IteratorAggregate
 {
     private $options = [
         'secure'   => false,

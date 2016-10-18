@@ -46,6 +46,51 @@ class Request {
 
 
     /**
+     * The ParameterCollection of the super global $_GET
+     * @var ieu\Http\ParameterCollectionInterface
+     */
+    
+    protected $get;
+
+
+    /**
+     * The ParameterCollection of the super global $_POST
+     * @var ieu\Http\ParameterCollectionInterface
+     */
+
+    protected $post;
+
+
+    /**
+     * The ParameterCollection of the super global $_SERVER
+     * @var ieu\Http\ParameterCollectionInterface
+     */
+
+    protected $server;
+
+    /**
+     * The ParameterCollection of the getallheaders() return value
+     * @var ieu\Http\ParameterCollectionInterface
+     */
+    protected $header;
+
+    /**
+     * The CookieCollection of the super global $_COOKIE
+     * @var ieu\Http\CookieCollectionInterface
+     */
+    
+    protected $cookie;
+
+
+    /**
+     * The Session object or NULL if not set
+     * @var null|ieu\Http\CookieCollectionInterface
+     */
+
+    protected $session = null;
+
+
+    /**
      * Creates a new request with the default super global parameters of PHP.
      *
      * @param array $parameters the array with the different parameter-arrays
@@ -54,14 +99,18 @@ class Request {
      * 
      */
 
-    public function __construct(array $parameters = [], SessionInterface $session = null, CookieInterface $cookie = null)
+    public function __construct(array $parameters = [])
     {
-        foreach (['get', 'post', 'files', 'server', 'header'] as $key) {
-            $this->$key = new ParameterCollection(isset($parameters[$key]) ? $parameters[$key] : []);
-        }
+        foreach (['get', 'post', 'files', 'server', 'header', 'cookie'] as $key) {
+            switch ($key) {
+                case 'cookie':
+                    $collection = new CookieCollection();
+                default:
+                    $collection = new ParameterCollection(isset($parameters[$key]) ? $parameters[$key] : []);
+            }
 
-        $this->session = $session ?: new Session();
-        $this->cookie = $cookie ?: new Cookie();
+            $this->$key = $collection;
+        }
     }
 
 
@@ -97,12 +146,16 @@ class Request {
      * @param  string $key     the key to look for
      * @param  mixed  $default the value thar will be returned if the key is not set
      *
-     * @return mixed           the found or the default value
+     * @return mixed|ieu\Http\ParameterCollectionInterface    the found or the default value or the collection object
      * 
      */
     
     public function get($key, $default = null) 
 	{
+        if (null === $key) {
+            return $this->get;
+        }
+
         return $this->get->has($key) ? $this->get->get($key) : $default;
 	}
 
@@ -119,6 +172,10 @@ class Request {
 
 	public function post($key, $default = null) 
 	{
+        if (null === $key) {
+            return $this->post;
+        }
+
 		return $this->post->has($key) ? $this->post->get($key) : $default;
 	}
 
@@ -135,6 +192,10 @@ class Request {
 
 	public function files($key, $default = null)
 	{
+        if (null === $key) {
+            return $this->files;
+        }
+
 		return $this->files->has($key) ? $this->files->get($key) : $default;
 	}
 
@@ -151,6 +212,10 @@ class Request {
 
 	public function server($key, $default = null)
 	{
+        if (null === $key) {
+            return $this->server;
+        }
+
 		return $this->server->has($key) ? $this->server->get($key) : $default;
 	}
 
@@ -167,6 +232,10 @@ class Request {
 
     public function cookie($key, $default = null)
     {
+        if (null === $key) {
+            return $this->cookie;
+        }
+
         return $this->cookie->has($key) ? $this->cookie->get($key) : $default;
     }
 
@@ -184,18 +253,27 @@ class Request {
 
     public function session($key, $default = null)
     {
+        if (null === $this->session) {
+            throw new \Exception('No session object set. Use \'Request::setSession\'.');
+        }
+
+        if (null === $key) {
+            return $this->session;
+        }
+
         return $this->session->has($key) ? $this->session->get($key) : $default;
     }
 
-    public function getSession()
-    {
-        return $this->session;
-    }
-
+    /**
+     * Sets the session object
+     *
+     * @param SessionInterface $session [description]
+     */
+    
     public function setSession(SessionInterface $session)
     {
         $this->session = $session;
-        
+
         return $this;
     }
 
