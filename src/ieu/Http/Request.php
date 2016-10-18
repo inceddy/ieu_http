@@ -50,7 +50,7 @@ class Request {
      * @var ieu\Http\ParameterCollectionInterface
      */
     
-    protected $get;
+    public $get;
 
 
     /**
@@ -58,7 +58,7 @@ class Request {
      * @var ieu\Http\ParameterCollectionInterface
      */
 
-    protected $post;
+    public $post;
 
 
     /**
@@ -66,20 +66,20 @@ class Request {
      * @var ieu\Http\ParameterCollectionInterface
      */
 
-    protected $server;
+    public $server;
 
     /**
      * The ParameterCollection of the getallheaders() return value
      * @var ieu\Http\ParameterCollectionInterface
      */
-    protected $header;
+    public $header;
 
     /**
      * The CookieCollection of the super global $_COOKIE
      * @var ieu\Http\CookieCollectionInterface
      */
     
-    protected $cookie;
+    public $cookie;
 
 
     /**
@@ -87,7 +87,7 @@ class Request {
      * @var null|ieu\Http\CookieCollectionInterface
      */
 
-    protected $session = null;
+    public $session = null;
 
 
     /**
@@ -102,11 +102,26 @@ class Request {
     public function __construct(array $parameters = [])
     {
         foreach (['get', 'post', 'files', 'server', 'header', 'cookie'] as $key) {
+            
+            $parameter = isset($parameters[$key]) ? $parameters[$key] : null;
+
             switch ($key) {
+                case 'session':
+                    if (!$parameter instanceof SessionInterface && null !== $parameter) {
+                        throw new \InvalidArgumentException('Invalid session argument. Must be instance of \'SessionInterface\' or NULL.');
+                    }
+                    $collection = $parameter;
+                    break;
+
                 case 'cookie':
-                    $collection = new CookieCollection();
+                    if (!$parameter instanceof CookieCollectionInterface && null !== $parameter) {
+                        throw new \InvalidArgumentException('Invalid cookie parameter. Must be instance of \'CookieCollectionInterface\' or NULL.');
+                    }
+                    $collection = new $parameter;
+                    break;
+
                 default:
-                    $collection = new ParameterCollection(isset($parameters[$key]) ? $parameters[$key] : []);
+                    $collection = new ParameterCollection($parameter ?: []);
             }
 
             $this->$key = $collection;
@@ -132,7 +147,9 @@ class Request {
                 'files'   => $_FILES, 
                 'server'  => $_SERVER, 
                 // Not allways available
-                'header'  => function_exists('getallheaders') ? getallheaders() : []
+                'header'  => function_exists('getallheaders') ? getallheaders() : [],
+                'cookie'  => new CookieCollection,
+                'session' => new Session
             ]);
         }
 
@@ -143,19 +160,17 @@ class Request {
 	/**
      * Shortcut to fetch a GET-parameter with optional default value  
      *
-     * @param  string $key     the key to look for
-     * @param  mixed  $default the value thar will be returned if the key is not set
+     * @param string $key  
+     *   the key to look for or NULL to acces the collection
+     * @param mixed  $default   
+     *   the value thar will be returned if the key is not set
      *
-     * @return mixed|ieu\Http\ParameterCollectionInterface    the found or the default value or the collection object
-     * 
+     * @return mixed
+     *   the found or the default value
      */
     
     public function get($key, $default = null) 
 	{
-        if (null === $key) {
-            return $this->get;
-        }
-
         return $this->get->has($key) ? $this->get->get($key) : $default;
 	}
 
@@ -163,19 +178,17 @@ class Request {
     /**
      * Shortcut to fetch a POST-parameter with optional default value  
      *
-     * @param  string $key     the key to look for
-     * @param  mixed  $default the value thar will be returned if the key is not set
+     * @param string $key
+     *   the key to look for
+     * @param mixed $default
+     *   the value thar will be returned if the key is not set
      *
-     * @return mixed           the found or the default value
-     * 
+     * @return mixed             
+     *   the found or the default value
      */
 
 	public function post($key, $default = null) 
 	{
-        if (null === $key) {
-            return $this->post;
-        }
-
 		return $this->post->has($key) ? $this->post->get($key) : $default;
 	}
 
@@ -183,14 +196,16 @@ class Request {
     /**
      * Shortcut to fetch a FILES-parameter with optional default value  
      *
-     * @param  string $key     the key to look for
-     * @param  mixed  $default the value thar will be returned if the key is not set
+     * @param  string|null $key      
+     *   the key to look for
+     * @param  mixed $default  
+     *   the value thar will be returned if the key is not set
      *
-     * @return mixed           the found or the default value
-     * 
+     * @return mixed
+     *   the found or the default value
      */
 
-	public function files($key, $default = null)
+	public function files($key = null, $default = null)
 	{
         if (null === $key) {
             return $this->files;
@@ -203,19 +218,17 @@ class Request {
     /**
      * Shortcut to fetch a SERVER-parameter with optional default value  
      *
-     * @param  string $key     the key to look for
-     * @param  mixed  $default the value thar will be returned if the key is not set
+     * @param  string $key     
+     *   the key to look for
+     * @param  mixed  $default 
+     *   the value thar will be returned if the key is not set
      *
-     * @return mixed           the found or the default value
-     * 
+     * @return mixed
+     *   the found or the default value
      */
 
 	public function server($key, $default = null)
 	{
-        if (null === $key) {
-            return $this->server;
-        }
-
 		return $this->server->has($key) ? $this->server->get($key) : $default;
 	}
 
@@ -232,23 +245,21 @@ class Request {
 
     public function cookie($key, $default = null)
     {
-        if (null === $key) {
-            return $this->cookie;
-        }
-
         return $this->cookie->has($key) ? $this->cookie->get($key) : $default;
     }
 
 
     /**
      * Shortcut to fetch a SESSION-parameter with optional default value.
-     * The function `session_start` must be called before initializing the Request object!
+     * The session object must me manualy set and started!
      *
-     * @param  string $key     the key to look for
-     * @param  mixed  $default the value thar will be returned if the key is not set
+     * @param string $key     
+     *   the key to look for
+     * @param mixed $default 
+     *   the value thar will be returned if the key is not set
      *
-     * @return mixed           the found or the default value
-     * 
+     * @return mixed
+     *   the found or the default value
      */
 
     public function session($key, $default = null)
@@ -257,35 +268,21 @@ class Request {
             throw new \Exception('No session object set. Use \'Request::setSession\'.');
         }
 
-        if (null === $key) {
-            return $this->session;
-        }
 
         return $this->session->has($key) ? $this->session->get($key) : $default;
-    }
-
-    /**
-     * Sets the session object
-     *
-     * @param SessionInterface $session [description]
-     */
-    
-    public function setSession(SessionInterface $session)
-    {
-        $this->session = $session;
-
-        return $this;
     }
 
 
     /**
      * Shortcut to fetch the first set parameter of GET, POST or FILE with optional default value  
      *
-     * @param  string $key     the key to look for
-     * @param  mixed  $default the value thar will be returned if the key is not set
+     * @param string $key
+     *   the key to look for
+     * @param mixed $default
+     *   the value thar will be returned if the key is not set
      *
-     * @return mixed           the found or the default value
-     * 
+     * @return mixed
+     *   the found or the default value
      */
 
 	public function request($key, $default = null)
