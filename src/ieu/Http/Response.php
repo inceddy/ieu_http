@@ -397,6 +397,11 @@ class Response
 		return $this;
 	}
 
+    public function getContent()
+    {
+        return $this->content;
+    }
+
 
     /**
      * Sends the response content to the client

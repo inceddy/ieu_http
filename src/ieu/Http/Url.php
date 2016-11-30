@@ -217,8 +217,6 @@ class Url {
 
 	public function setQuery($query, $append = false)
 	{
-		
-
 		if (is_string($query)) {
 			$queryArray = [];
 			parse_str($query, $queryArray);
