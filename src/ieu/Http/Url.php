@@ -86,6 +86,20 @@ class Url {
 
 
 	/**
+	 * The query
+	 * @var string
+	 */
+	protected $query = '';
+
+
+	/**
+	 * The fragment
+	 * @var string
+	 */
+	protected $fragment = '';
+
+
+	/**
 	 * Constructor
 	 *
 	 * @param array $options the options for this instance
@@ -215,6 +229,16 @@ class Url {
 		return $this->query;
 	}
 
+	public function setFragment($fragment)
+	{
+		$this->fragment = $fragment ?: '';
+	}
+
+	public function getFragment()
+	{
+		return $this->fragment;
+	}
+
 
 	/**
 	 * Tests a regexp pattern against the URL path.
@@ -255,11 +279,9 @@ class Url {
 			if (false !== strpos($this->last(), '.')) {
 				$this->setFile(array_pop($this->partials));
 			}	
-
-			return $this;
 		}
 
-
+		return $this;
 	}
 
 	/**
