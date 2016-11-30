@@ -6,14 +6,10 @@ use ieu\Http\Request;
  * @author  Philipp Steingrebe <philipp@steingrebe.de>
  */
 class RequestTest extends \PHPUnit_Framework_TestCase {
-	public function testRequestNative()
-	{
-		$request = Request::native();
-	}
 
 	public function testRequestDefault()
 	{
-		$request = new Request();
+		$request = Request::native();
 
 		$this->assertNull($request->get('unsetkey'));
 		$this->assertEquals('get-test', $request->get('unsetkey', 'get-test'));

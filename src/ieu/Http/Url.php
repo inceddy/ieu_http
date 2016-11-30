@@ -87,9 +87,9 @@ class Url {
 
 	/**
 	 * The query
-	 * @var string
+	 * @var array
 	 */
-	protected $query = '';
+	protected $query = [];
 
 
 	/**
@@ -112,11 +112,11 @@ class Url {
 			'scheme'   => 'http',
 			'host'     => 'localhost',
 			'port'     => null,
-			'user'     => null,
-			'pass'     => null,
+			'user'     => '',
+			'pass'     => '',
 			'path'     => '',
-			'query'    => null,
-			'fragment' => null
+			'query'    => '',
+			'fragment' => ''
 		], $parts);
 
 		$this->setScheme($parts['scheme']);
@@ -125,6 +125,8 @@ class Url {
 		$this->setHost($parts['host']);
 		$this->setPort($parts['port']);
 		$this->setPath($parts['path']);
+		$this->setQuery($parts['query']);
+		$this->setFragment($parts['fragment']);
 	}
 
 	/**
@@ -213,20 +215,33 @@ class Url {
 		return $this->port;
 	}
 
-	public function setQuery($query)
+	public function setQuery($query, $append = false)
 	{
-		if (is_array($query)) {
-			$query = http_build_query($query);
+		
+
+		if (is_string($query)) {
+			$queryArray = [];
+			parse_str($query, $queryArray);
+			$query = $queryArray;
 		}
 
-		$this->query = (string) $query;
+		if (!is_array($query)) {
+			$query = (array) $query;
+		}
+
+		$this->query = $append ? array_merge($this->query, $query) : $query;
 
 		return $this;
 	}
 
+	public function appendQuery($query)
+	{
+		return $this->setQuery($query, true);
+	}
+
 	public function getQuery()
 	{
-		return $this->query;
+		return http_build_query($this->query);
 	}
 
 	public function setFragment($fragment)
@@ -295,7 +310,13 @@ class Url {
 	
 	public function getPath($withFile = true)
 	{
-		return implode('/', $this->partials) . ($withFile ? '/' . $this->getFile() : ''); 
+		$partials = $this->partials;
+		
+		if ($withFile && $file = $this->getFile()) {
+			$partials[] = $file;
+		}
+
+		return implode('/', $partials); 
 	}
 
 	public function setFile($file)
