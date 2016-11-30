@@ -117,7 +117,7 @@ class Request {
                     if (!$parameter instanceof CookieCollectionInterface && null !== $parameter) {
                         throw new \InvalidArgumentException('Invalid cookie parameter. Must be instance of \'CookieCollectionInterface\' or NULL.');
                     }
-                    $collection = new $parameter;
+                    $collection = $parameter;
                     break;
 
                 default:

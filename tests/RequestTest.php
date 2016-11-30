@@ -32,7 +32,6 @@ class RequestTest extends \PHPUnit_Framework_TestCase {
 
 		$this->assertNull($request->session('unsetkey'));
 		$this->assertEquals('session-test', $request->session('unsetkey', 'session-test'));
-
 	}
 
 	public function testRequestRequest()
