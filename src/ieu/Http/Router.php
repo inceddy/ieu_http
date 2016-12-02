@@ -241,7 +241,7 @@ class Router {
 
 				// Test for global pattern
 				foreach (array_intersect_key($this->globalPattern, $parameter) as $name => $pattern) {
-					if (0 === preg_match('/' . $parameter . '/i' , $parameter[$name])) {
+					if (0 === preg_match($pattern , $parameter[$name])) {
 						continue;
 					}
 				}
