@@ -242,14 +242,14 @@ class Router {
 				// Test for global pattern
 				foreach (array_intersect_key($this->globalPattern, $parameter) as $name => $pattern) {
 					if (0 === preg_match($pattern , $parameter[$name])) {
-						continue;
+						continue 2;
 					}
 				}
 					
 
 				try {
 					return call_user_func($handler, $parameter, $this->request);
-				} catch(\Exception $e) {
+				} catch(Exception $e) {
 					$errors[] = $e;
 				}
 			}
