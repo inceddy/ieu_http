@@ -219,8 +219,8 @@ class Router {
 	
 	public function handle() 
 	{
-		// Exceptions caught while handling the routes
-		$errors = [];
+		// Exception caught while handling the routes
+		$error = null;
 
 		// Loop over all handler routes bundles
 		foreach ($this->handlerAndRoutesCache as $handlerAndRoutes) {
@@ -250,13 +250,18 @@ class Router {
 				try {
 					return call_user_func($handler, $parameter, $this->request);
 				} catch(Exception $e) {
-					$errors[] = $e;
+					$error = $e;
+					break 2;
 				}
 			}
 		}
 
 		if (isset($this->defaultHandler)) {
-			return call_user_func($this->getDefaultHandler(), $this->request, $errors);
+			return call_user_func($this->getDefaultHandler(), $this->request, $error);
+		}
+
+		if (null !== $error) {
+			throw $error;
 		}
 
 		throw new Exception('No matching route found. Set a default handler to catch this case.');
