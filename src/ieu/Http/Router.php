@@ -248,7 +248,25 @@ class Router {
 					
 
 				try {
-					return call_user_func($handler, $parameter, $this->request);
+					$result = call_user_func($handler, $parameter, $this->request);
+
+					switch (true) {
+						// Nothing returned -> continue
+						case is_null($result):
+							continue;
+						// Response object
+						case $result instanceof Response:
+							return $result;
+						// String -> transform to response
+						case is_string($result) || is_numeric($result):
+							return new Response($result);
+						// Array -> transform to json response
+						case is_array($result) || is_object($result):
+							return new JsonResponse($result);
+
+						default:
+							throw new Exception('Invalid route return value');
+					}
 				} catch(Exception $e) {
 					$error = $e;
 					break 2;
