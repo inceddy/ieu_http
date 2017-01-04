@@ -111,8 +111,8 @@ class RouterProvider {
 		// Set default handler
 		if (isset($this->otherwise)) {
 			$handler = $this->otherwise;
-			$router->otherwise(function($request, $errors) use ($injector, $handler) {
-				return $injector->invoke($handler, ['Request' => $request, 'Errors' => $errors]);
+			$router->otherwise(function($request, $error) use ($injector, $handler) {
+				return $injector->invoke($handler, ['Request' => $request, 'Error' => $error]);
 			});
 		}
 
