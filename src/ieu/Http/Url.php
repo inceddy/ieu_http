@@ -198,7 +198,7 @@ class Url {
 		if (null === $port) {
 			$scheme = $this->getScheme();
 			if (false === $port = array_search($scheme, static::$portSchemeMap)) {
-				throw new InvalidArgumentException(sprintf('You must provide a port for this scheme %s', $scheme));
+				$port = null;
 			}
 		}
 
@@ -403,7 +403,8 @@ class Url {
 		$host = $this->getHost();
 		$port = $this->getPort();
 		// Don't use the port if its the standard for the current scheme
-		if (isset(static::$portSchemeMap[$port]) && static::$portSchemeMap[$port] == $scheme) {
+		if (null === $port || 
+			isset(static::$portSchemeMap[$port]) && static::$portSchemeMap[$port] == $scheme) {
 			$port = '';
 		}
 		$path = $this->getPath();
