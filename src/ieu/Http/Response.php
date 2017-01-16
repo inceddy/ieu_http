@@ -340,7 +340,7 @@ class Response
 
 	public function setHeaders(array $headers)
 	{
-		foreach ($this->headers as $key => $header) {
+		foreach ($headers as $key => $header) {
 			$this->setHeader($key, $header);
 		}
 
