@@ -28,19 +28,12 @@ class JsonResponse extends Response
     
 	public function __construct($content = null, $code = self::HTTP_OK, array $headers = [])
 	{
-		$this->headers = new ParameterCollection();
+        parent::__construct($content, $code, $headers);
 
         // Set JSON headers
         $this->setHeaders([
             'Content-type' => ['application/json', 'charset=utf-8']
         ]);
-
-		$this->setContent($content);
-		$this->setStatusCode($code);
-		$this->setHeaders($headers);
-
-		// By default set HTTP protocol version to 1.1
-        $this->setProtocolVersion(self::HTTP_VERSION_1_1);
 	}
 
     /**
