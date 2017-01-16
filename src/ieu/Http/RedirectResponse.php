@@ -35,8 +35,6 @@ class RedirectResponse extends Response
 	public function __construct($target, $code = self::HTTP_FOUND, array $headers = [])
 	{
         parent::__construct('', $code, $headers);
-		$this->headers = new ParameterCollection();
-
 		$this->setTarget($target);
 	}
 
