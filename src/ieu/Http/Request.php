@@ -273,6 +273,11 @@ class Request {
     }
 
 
+    public function header($key, $default = null)
+    {
+        return $this->header->has($key) ? $this->header->get($key) : $default;
+    }
+
     /**
      * Shortcut to fetch the first set parameter of GET, POST or FILE with optional default value  
      *
