@@ -165,7 +165,7 @@ class Response
      * @var string
      */
     
-    private $protocolVersion;
+    protected $protocolVersion;
 
 
     /**
@@ -173,7 +173,7 @@ class Response
      * @var integer
      */
     
-    private $statusCode;
+    protected $statusCode;
 
 
     /**
@@ -182,14 +182,14 @@ class Response
      */
 
 
-    private $content;
+    protected $content;
 
     /**
      * The headers
      * @var ieu\Http\ParameterCollection
      */
     
-    private $headers;
+    protected $headers;
 
 
     /**
