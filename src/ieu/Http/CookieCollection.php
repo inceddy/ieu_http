@@ -146,7 +146,8 @@ class CookieCollection implements CookieCollectionInterface, Countable, Iterator
     public function delete($key)
     {
         if ($this->has($key)) {
-            setcookie($key, null, time() - 3600);
+            unset ($_COOKIE[$key]);
+            $this->set($key, null, ['expire' => time() - 3600]);
         }
 
         return $this;
