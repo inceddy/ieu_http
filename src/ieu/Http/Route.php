@@ -24,7 +24,7 @@ function Route($routePattern, $methods = Request::HTTP_ALL)
 
 class Route {
 
-	const VAR_PATTERN = '/\{([a-z0-9\-_]+)\}/i';
+	const VAR_PATTERN = '/\{([a-z0-9\-_]+)(\*)?\}/i';
 	const ALLOWED_CHARS = '[a-z0-9_\.\~\-]+';
 
 	/**
@@ -97,7 +97,8 @@ class Route {
 
 		$this->routePattern = '~^' . preg_replace_callback(self::VAR_PATTERN, function($matches) {
 			$this->parameter[] = $key = $matches[1];
-			return '(' . (isset($this->parameterPattern[$key]) ? $this->parameterPattern[$key] : self::ALLOWED_CHARS) . ')';
+			$optional = $matches[2];
+			return '(' . (isset($this->parameterPattern[$key]) ? $this->parameterPattern[$key] : self::ALLOWED_CHARS) . ')' . ($optional ? '?' : '');
 		}, $this->route) . ($this->terminated ? '$' : '') . '~i';
 
 		return $this->routePattern;
