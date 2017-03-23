@@ -3,7 +3,7 @@
 /*
  * This file is part of ieUtilities HTTP.
  *
- * (c) 2016 Philipp Steingrebe <development@steingrebe.de>
+ * (c) 2017 Philipp Steingrebe <development@steingrebe.de>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -97,7 +97,7 @@ class Route {
 
 		$this->routePattern = '~^' . preg_replace_callback(self::VAR_PATTERN, function($matches) {
 			$this->parameter[] = $key = $matches[1];
-			$optional = $matches[2];
+			$optional = isset($matches[2]);
 			return '(' . (isset($this->parameterPattern[$key]) ? $this->parameterPattern[$key] : self::ALLOWED_CHARS) . ')' . ($optional ? '?' : '');
 		}, $this->route) . ($this->terminated ? '$' : '') . '~i';
 

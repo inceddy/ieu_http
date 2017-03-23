@@ -46,4 +46,18 @@ class RouteTest extends \PHPUnit_Framework_TestCase {
 			->validate('user', 'customer\d+');
 		$this->assertEquals(null, $routeInvalid->parse($this->url));
 	}
+
+	public function testRouteVariableMulti()
+	{
+		$url = $this->getMockBuilder(ieu\Http\Url::CLASS)
+		    ->getMock();
+        $url->method('getPath')
+            ->willReturn('test/path/p200x300');
+
+		$route = (new Route('test/path/p{width}x{height}'))
+			->validate('witdh', '\d+')
+			->validate('height', '\d+');
+
+		$this->assertEquals(['width' => 200, 'height' => 300], $route->parse($url));
+	}
 }
