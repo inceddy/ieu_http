@@ -33,6 +33,9 @@ $route2 = new Route('/path/to/{everything}/update');
 
 // Will match every route beginning with /path/to/
 $route3 = new Route('/path/to/*')
+
+// Will match every route beginning with /path/to/some_id and /path/to
+$route3 = new Route('/path/to/{id?}')
 ```
 
 ## RouterProvider
