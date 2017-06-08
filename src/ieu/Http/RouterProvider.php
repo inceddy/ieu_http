@@ -45,6 +45,7 @@ class RouterProvider extends Router {
 	
 	public function __construct()
 	{
+		$this->currentContext = &$this->addContext();
 		$this->factory = ['Injector', 'Request', [$this, 'factory']];
 	}
 
@@ -60,13 +61,15 @@ class RouterProvider extends Router {
 	
 	public function factory(Injector $injector, Request $request)
 	{
+		$this->request = $request;
+
 		foreach ($this->context as &$context) {
 			if (isset($context[self::DEFAULT])) {
 				$context[self::DEFAULT] = function($request, $error) use ($injector) {
 
 				};
 			}
-			
+
 			array_walk($context[self::ROUTES], function(&$routeAndHandler) use ($injector) {
 				list(, $handler) = $routeAndHandler;
 				$routeAndHandler[1] = function($request, $parameter) use ($injector, $handler) {
@@ -75,27 +78,36 @@ class RouterProvider extends Router {
 			});
 		}
 
-		parent::__construct($request);
 		$this->constructed = true;
 
 		return $this;
 	}
 
-	public function route(Route $route, callable $handler)
+	/**
+	 * Add new route to current context
+	 *
+	 * @param  Route  $route 
+	 *    The route to add
+	 *
+	 * @return self
+	 */
+	
+	public function route(Route $route, $handler)
 	{
 		if ($this->constructed) {
 			throw new LogicException('You cant add another route if provider has been initialized!');
 		}
 
-		return parent::route($route, $handler);
+		$this->currentContext[self::ROUTES][] = [$route, $handler];
+		return $this;
 	}
 
-	public function handle(Url $url) {
+	public function handle() {
 		if (!$this->constructed) {
 			throw new LogicException('You cant call handle an the RouteProvider!');
 		}
 
-		return parent::handle($url);
+		return parent::handle();
 	}
 }
 

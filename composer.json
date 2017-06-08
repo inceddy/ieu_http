@@ -14,5 +14,9 @@
         "psr-0" : {
             "ieu\\Http\\" : "src/"
         }
+    },
+
+    "require-dev": {
+        "stg/ieu_container": "dev-master"
     }
 }

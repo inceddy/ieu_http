@@ -3,5 +3,6 @@
 *.local.*
 \_*
 Thumbs.db
+composer.lock
 /
 vendor/

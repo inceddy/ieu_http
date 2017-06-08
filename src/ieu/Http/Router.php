@@ -22,18 +22,18 @@ use Closure;
 
 class Router {
 
-	private const ROUTES            = 0;
-	private const PREFIX            = 1;
-	private const MIDDLEWARE        = 2;
-	private const DEFAULT           = 3;
-	private const PARAMETER_PATTERN = 4;
+	protected const ROUTES            = 0;
+	protected const PREFIX            = 1;
+	protected const MIDDLEWARE        = 2;
+	protected const DEFAULT           = 3;
+	protected const PARAMETER_PATTERN = 4;
 
 	/**
 	 * The current request handled by this router
 	 * @var ieu\Reuqest
 	 */
 
-	private $request;
+	protected $request;
 
 
 	/**
@@ -47,7 +47,7 @@ class Router {
 	 * @var array
 	 */
 
-	private $context = [];
+	protected $context = [];
 
 
 	/**
@@ -55,7 +55,7 @@ class Router {
 	 * @var array
 	 */
 	
-	private $currentContext;
+	protected $currentContext;
 
 
 	/**
@@ -75,7 +75,7 @@ class Router {
 		$this->currentContext = &$this->addContext();
 	}
 
-	private function &addContext()
+	protected function &addContext()
 	{
 		$this->context[] = [
 			self::ROUTES            => [],
@@ -160,14 +160,18 @@ class Router {
 	 * @return self
 	 */
 	
-	public function route(Route $route, callable $handler) 
+	public function route(Route $route, $handler) 
 	{
+		if (!is_callable($handler)) {
+			throw new Exception('Route handler must be callable.');
+		}
+
 		$this->currentContext[self::ROUTES][] = [$route, $handler];
 		return $this;
 	}
 
 
-	public function request(string $path, int $methods = Request::HTTP_ALL, callable $handler)
+	public function request(string $path, int $methods, $handler)
 	{
 		$path = trim($path, "/\n\t ");
 
@@ -178,24 +182,29 @@ class Router {
 		return $this->route(new Route($path, $methods), $handler);
 	}
 
-	public function get(string $path, callable $handler)
+	public function get(string $path, $handler)
 	{
 		return $this->request($path, Request::HTTP_GET | Request::HTTP_HEAD, $handler);
 	}
 
-	public function post(string $path, callable $handler)
+	public function post(string $path, $handler)
 	{
 		return $this->request($path, Request::HTTP_POST, $handler);
 	}
 
-	public function put(string $path, callable $handler)
+	public function put(string $path, $handler)
 	{
 		return $this->request($path, Request::HTTP_PUT, $handler);
 	}
 
-	public function delete(string $path, callable $handler)
+	public function delete(string $path, $handler)
 	{
 		return $this->request($path, Request::HTTP_DELETE, $handler);
+	}
+
+	public function any(string $path, $handler)
+	{
+		return $this->request($path, Request::HTTP_ALL, $handler);
 	}
 
 	/**
