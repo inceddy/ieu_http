@@ -1,9 +1,9 @@
 {
     "name": "stg/ieu_http",
-    "description": "ieUtilities - HTTP",
+    "description": "Lib for handling http requests and responses",
     "type": "",
     "license": "MIT",
-    "version": "1.0",
+    "version": "2.0.0",
     "authors": [
         {
             "name": "Philipp Steingrebe",
@@ -12,7 +12,7 @@
     ],
     "autoload": {
         "psr-0" : {
-            "ieu\\" : "src/"
+            "ieu\\Http\\" : "src/"
         }
     }
 }

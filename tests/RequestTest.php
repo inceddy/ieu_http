@@ -20,6 +20,9 @@ class RequestTest extends \PHPUnit_Framework_TestCase {
 		$this->assertNull($request->files('unsetkey'));
 		$this->assertEquals('files-test', $request->files('unsetkey', 'files-test'));
 
+		$this->assertNull($request->header('unsetkey'));
+		$this->assertEquals('header-test', $request->header('unsetkey', 'header-test'));
+
 		$this->assertNull($request->server('unsetkey'));
 		$this->assertEquals('server-test', $request->server('unsetkey', 'server-test'));
 
@@ -30,10 +33,26 @@ class RequestTest extends \PHPUnit_Framework_TestCase {
 		$this->assertEquals('session-test', $request->session('unsetkey', 'session-test'));
 	}
 
-	public function testRequestRequest()
+	public function testRequestParameterAccess()
 	{
-		$request = new Request(['post' => ['test' => true]]);
-		$this->assertTrue($request->request('test'));
+		$request = new Request([
+			'get'  => ['param' => null],
+			'post' => ['param' => true]
+		]);
+
+		$this->assertTrue($request->request('param'));
+
+		$request = new Request([
+			'get'    => ['get'    => true],
+			'post'   => ['post'   => true],
+			'files'  => ['files'  => true],
+			'header' => ['header' => true]
+		]);
+
+		$this->assertTrue($request->get('get'));
+		$this->assertTrue($request->post('post'));
+		$this->assertTrue($request->files('files'));
+		$this->assertTrue($request->header('header'));
 	}
 
 	public function testSession()

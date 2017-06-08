@@ -1,27 +1,33 @@
 <?php
 
 use ieu\Http\Request;
+use ieu\Http\Url;
 
 
 class RequestMock extends Request {
 
-	private static $method = Request::HTTP_GET;
+	private $method = Request::HTTP_ALL;
 
-	private $uri = '';
+	private $url;
+
+	public function setMethod(int $method)
+	{
+		$this->method = $method;
+	}
 
 	public function isMethod($method)
 	{
-		return true;
+		return (bool) $method & $this->method;
 	}
 
-	public function setUri($uri)
+	public function setUrl($url)
 	{
-		$this->uri = $uri;
+		$this->url = Url::from($url);
 		return $this;
 	}
 
-	public function getUri()
+	public function getUrl()
 	{
-		return $this->uri;
+		return $this->url;
 	}
 }

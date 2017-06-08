@@ -103,7 +103,7 @@ class Request {
     {
         foreach (['get', 'post', 'files', 'server', 'header', 'cookie', 'session'] as $key) {
             
-            $parameter = isset($parameters[$key]) ? $parameters[$key] : null;
+            $parameter = $parameters[$key] ?? null;
 
             switch ($key) {
                 case 'session':
@@ -140,20 +140,16 @@ class Request {
     {
         static $instance;
 
-        if (!isset($instance)) {
-            $instance = new static ([
-                'get'     => $_GET, 
-                'post'    => $_POST, 
-                'files'   => $_FILES, 
-                'server'  => $_SERVER, 
-                // Not allways available
-                'header'  => function_exists('getallheaders') ? getallheaders() : [],
-                'cookie'  => new CookieCollection,
-                'session' => new Session
-            ]);
-        }
-
-        return $instance;
+        return $instance ?: $instance = new static ([
+            'get'     => $_GET, 
+            'post'    => $_POST, 
+            'files'   => $_FILES, 
+            'server'  => $_SERVER, 
+            // Not allways available
+            'header'  => function_exists('getallheaders') ? getallheaders() : [],
+            'cookie'  => new CookieCollection,
+            'session' => new Session
+        ]);
     }
 
 

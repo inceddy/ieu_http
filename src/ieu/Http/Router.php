@@ -14,12 +14,19 @@ namespace ieu\Http;
 use ieu\Container\Provider;
 use LogicException;
 use Exception;
+use Closure;
 
 /**
  * Class for routing http requests
  */
 
 class Router {
+
+	private const ROUTES            = 0;
+	private const PREFIX            = 1;
+	private const MIDDLEWARE        = 2;
+	private const DEFAULT           = 3;
+	private const PARAMETER_PATTERN = 4;
 
 	/**
 	 * The current request handled by this router
@@ -33,35 +40,22 @@ class Router {
 	 * All handler routes bundles attachte to this router
 	 * @var array<array<callable, array<ieu\Http\Route>>> 
 	 */
-	
-	private $handlerAndRoutesCache = [];
 
 
 	/**
-	 * The route cache for the next occuring handler
-	 * @var array<ieu\Http\Route>
+	 * Router context
+	 * @var array
 	 */
-	
-	private $currentRoutes = [];
+
+	private $context = [];
 
 
 	/**
-	 * The default handler if no route matches the request
-	 * @var callable
+	 * Reference on the current context
+	 * @var array
 	 */
 	
-	private $defaultHandler;
-
-
-	/**
-	 * Variable pattern that are valid
-	 * for all Routes.
-	 *
-	 * @var [string]
-	 */
-	
-	private $globalPattern = [];
-	
+	private $currentContext;
 
 
 	/**
@@ -78,6 +72,20 @@ class Router {
 	public function __construct(Request $request)
 	{
 		$this->request = $request;
+		$this->currentContext = &$this->addContext();
+	}
+
+	private function &addContext()
+	{
+		$this->context[] = [
+			self::ROUTES            => [],
+			self::MIDDLEWARE        => [],
+			self::PREFIX            => null,
+			self::DEFAULT           => null,
+			self::PARAMETER_PATTERN => []
+		];
+
+		return $this->context[sizeof($this->context) - 1];
 	}
 
 
@@ -110,50 +118,85 @@ class Router {
 		return $this->request;
 	}
 
+	public function context(Closure $handler) {
+		// Add new group context
+		$this->currentContext = &$this->addContext();
+		Closure::bind($handler, $this)();
+		// Reset to default context
+		$this->currentContext = &$this->context[sizeof($this->context) - 1];
+
+		return $this;
+	}
+
+	public function middleware(callable ...$middlewares)
+	{
+		$this->currentContext[self::MIDDLEWARE] = array_merge($this->currentContext[self::MIDDLEWARE], $middlewares);
+		return $this;
+	}
 
 	/**
-	 * Adds a new current route for the next comming handler.
+	 * Add path prefix to current context
+	 * e.g. `custom/prefix
 	 *
-	 * @param  Route  $route  
-	 *    The route
+	 * @param  string $prefix 
+	 *    The path prefix
 	 *
 	 * @return self
-	 * 
 	 */
 	
-	public function when(Route $route)
+	public function prefix(string $prefix) 
 	{
-		$this->currentRoutes[] = $route;
-
+		$this->currentContext[self::PREFIX] = trim($prefix, "/\n\t ");
 		return $this;
 	}
 
 
 	/**
-	 * Sets the handler for the cached routes.
+	 * Add new route to current context
 	 *
-	 * @throws \LogicException
-	 *    If there is no route set, that might be handled
-	 *
-	 * @param  callable $handler 
-	 *    The handler
+	 * @param  Route  $route 
+	 *    The route to add
 	 *
 	 * @return self
-	 * 
 	 */
 	
-	public function then(callable $handler)
+	public function route(Route $route, callable $handler) 
 	{
-		if (empty($this->currentRoutes)) {
-			throw new LogicException(sprintf("Nothing to handle. The route cache is empty. Use %s::when() to set a route.", __CLASS__));
+		$this->currentContext[self::ROUTES][] = [$route, $handler];
+		return $this;
+	}
+
+
+	public function request(string $path, int $methods = Request::HTTP_ALL, callable $handler)
+	{
+		$path = trim($path, "/\n\t ");
+
+		if (null !== $prefix = $this->currentContext[self::PREFIX]) {
+			$path = $prefix . '/' . $path;
 		}
 
-		$this->handlerAndRoutesCache[] = [$handler, $this->currentRoutes];
-		$this->currentRoutes = [];
-
-		return $this;
+		return $this->route(new Route($path, $methods), $handler);
 	}
 
+	public function get(string $path, callable $handler)
+	{
+		return $this->request($path, Request::HTTP_GET | Request::HTTP_HEAD, $handler);
+	}
+
+	public function post(string $path, callable $handler)
+	{
+		return $this->request($path, Request::HTTP_POST, $handler);
+	}
+
+	public function put(string $path, callable $handler)
+	{
+		return $this->request($path, Request::HTTP_PUT, $handler);
+	}
+
+	public function delete(string $path, callable $handler)
+	{
+		return $this->request($path, Request::HTTP_DELETE, $handler);
+	}
 
 	/**
 	 * Sets a global variable pattern for the
@@ -169,7 +212,7 @@ class Router {
 	
 	public function validate($name, $pattern)
 	{
-		$this->globalPattern[$name] = $pattern;
+		$this->currentContext[self::PARAMETER_PATTERN][$name] = $pattern;
 		return $this;
 	}
 
@@ -187,24 +230,31 @@ class Router {
 	
 	public function otherwise(callable $defaultHandler)
 	{
-		$this->defaultHandler = $defaultHandler;
-
+		$this->currentContext[self::DEFAULT] = $defaultHandler;
 		return $this;
 	}
 
-
-	/**
-	 * Gets the default handler or null of no default handler is set.
-	 *
-	 * @return callable|null  
-	 *    The handler
-	 */
-	
-	public function getDefaultHandler()
+	private function composeMiddleware(array $middlewares)
 	{
-		return isset($this->defaultHandler) ? $this->defaultHandler : null;
-	}
+		$curryedMiddlewares = array_map(function($middleware) {
+			return function ($next) use ($middleware) {
+				return function (...$args) use ($middleware, $next) {
+					return call_user_func($middleware, $next, ...$args);
+				};
+			};
+		}, array_reverse($middlewares));
 
+		return function ($handler) use ($curryedMiddlewares) {
+			$handler = function(...$args) use ($handler) {
+				return call_user_func_array($handler, $args);
+			};
+			return array_reduce($curryedMiddlewares, function($state, $middleware){
+				return function(...$args) use($state, $middleware) {
+					return $middleware($state)(...$args);
+				};
+			}, $handler);
+		};
+	}
 
 	/**
 	 * Trys to match a route against the current request.
@@ -222,17 +272,16 @@ class Router {
 		// Exception caught while handling the routes
 		$error = null;
 
-		// Loop over all handler routes bundles
-		foreach ($this->handlerAndRoutesCache as $handlerAndRoutes) {
-			list($handler, $routes) = $handlerAndRoutes;
-
-			// Loop over all routes for this handler
-			foreach ($routes as $route) {
+		// Loop over all context
+		foreach ($this->context as $context) {
+			foreach ($context[self::ROUTES] as $routeAndHandler) {
+				list($route, $handler) = $routeAndHandler;
 
 				// Test for method (eg. HTTP_GET, HTTP_POST, ...)
 				if (!$this->request->isMethod($route->getMethods())) {
 					continue;
 				}
+
 
 				// Test for local pattern
 				if (null === $parameter = $route->parse($this->request->getUrl())) {
@@ -240,15 +289,15 @@ class Router {
 				}
 
 				// Test for global pattern
-				foreach (array_intersect_key($this->globalPattern, $parameter) as $name => $pattern) {
+				foreach (array_intersect_key($context[self::PARAMETER_PATTERN], $parameter) as $name => $pattern) {
 					if (0 === preg_match($pattern , $parameter[$name])) {
 						continue 2;
 					}
 				}
-					
-
+				
+				// Execute route handler
 				try {
-					$result = call_user_func($handler, $parameter, $this->request);
+					$result = $this->composeMiddleware($context[self::MIDDLEWARE])($handler)($this->request, $parameter);
 
 					switch (true) {
 						// Nothing returned -> continue
@@ -272,10 +321,16 @@ class Router {
 					break 2;
 				}
 			}
+
+			// Use context default handler
+			if (isset($context[self::DEFAULT])) {
+				return call_user_func($context[self::DEFAULT], $this->request, $error);
+			}
 		}
 
-		if (isset($this->defaultHandler)) {
-			return call_user_func($this->getDefaultHandler(), $this->request, $error);
+		// Use default context default handler
+		if (isset($this->context[0][self::DEFAULT])) {
+			return call_user_func($this->context[0][self::DEFAULT], $this->request, $error);
 		}
 
 		if (null !== $error) {
@@ -283,10 +338,5 @@ class Router {
 		}
 
 		throw new Exception('No matching route found. Set a default handler to catch this case.');
-	}
-
-	public static function sanitizePattern($pattern)
-	{
-		
 	}
 }

@@ -13,22 +13,30 @@
 namespace ieu\Http;
 
 /**
- * @author Philipp Steingrebe <philipp@steingrebe.de>
+ * Route describing an url path
+ * e.g. /test/{user_id}/edit
+ * 
+ * @author Philipp Steingrebe <development@steingrebe.de>
  */
-
-function Route($routePattern, $methods = Request::HTTP_ALL)
-{
-	return new Route($routePattern, $methods);
-}
 
 
 class Route {
 
-	const VAR_PATTERN = '/\{([a-z0-9\-_]+)(\*)?\}/i';
-	const ALLOWED_CHARS = '[a-z0-9_\.\~\-]+';
+	// user/{id[0-9+]?}
+	private const VAR_PATTERN = '/\{([a-z0-9\-_]+)(?:|([^\}]+))?\}/i';
+	private const ALLOWED_CHARS = '[a-z0-9_\.~\-]+';
+
 
 	/**
-	 * Die Request-Methode, die diese Route bedient
+	 * The route description
+	 * @var string
+	 */
+	
+	protected $route;
+
+
+	/**
+	 * The request methods handled by this route
 	 * @see ieu\Request\Request
 	 * @var integer
 	 */
@@ -37,11 +45,11 @@ class Route {
 
 
 	/**
-	 * Der Pfad dieser Route
-	 * @var string
+	 * Names of all parameters found in route description
+	 * @var array<string>
 	 */
 	
-	protected $path;
+	protected $parameter = [];
 
 
 	/**
@@ -53,13 +61,6 @@ class Route {
 
 
 	/**
-	 * Validierungsmuster für den Pfad
-	 * @var string
-	 */
-	
-	protected $routePattern;	
-
-	/**
 	 * Indicates if the route pattern is terminated with '$'.
 	 * @var boolean
 	 */
@@ -68,15 +69,15 @@ class Route {
 
 
 	/**
-	 * Die Parameter 
+	 * Constructor
 	 *
-	 * @var array
+	 * @param string $route
+	 *    The route description
+	 * @param int $methods
+	 *    The http method bitmask
 	 */
 	
-	protected $parameter = [];
-
-
-	public function __construct($route, $methods = Request::HTTP_ALL)
+	public function __construct(string $route, int $methods = Request::HTTP_ALL)
 	{
 		$route = trim($route, " \t\n\r/"); // Remove leading and tailing slashes and whitespaces
 
@@ -89,28 +90,67 @@ class Route {
 		$this->methods = $methods;
 	}
 
-	protected function getRoutePattern()
+	/**
+	 * Builds the pattern a variable in the url path 
+	 * must match.
+	 *
+	 * @param  string $key
+	 *    The parameter key
+	 *
+	 * @return string
+	 *    The generated pattern
+	 */
+	
+	protected function buildParameterPattern(string $key) : string
 	{
-		if (isset($this->routePattern)) {
-			return $this->routePattern;
-		}
-
-		$this->routePattern = '~^' . preg_replace_callback(self::VAR_PATTERN, function($matches) {
-			$this->parameter[] = $key = $matches[1];
-			$optional = isset($matches[2]);
-			return '(' . (isset($this->parameterPattern[$key]) ? $this->parameterPattern[$key] : self::ALLOWED_CHARS) . ')' . ($optional ? '?' : '');
-		}, $this->route) . ($this->terminated ? '$' : '') . '~i';
-
-		return $this->routePattern;
+		return '(' . str_replace('~', '\\~', $this->parameterPattern[$key] ?? self::ALLOWED_CHARS) . ')';
 	}
 
-	public function setTermination($terminated = true)
+
+	/**
+	 * Builds the pattern an url path must match
+	 * to be handled by this route.
+	 *
+	 * @return string
+	 */
+	
+	protected function buildRoutePattern()
+	{
+		return '~^' . preg_replace_callback(self::VAR_PATTERN, function($matches) {
+			$this->parameter[] = $key = $matches[1];
+
+			// Shorthand validation only if not set using the validation-method
+			if (isset($matches[2]) && !isset($this->parameterPattern[$key])) {
+				$this->parameterPattern[$key] = $matches[2];
+			}
+			return $this->buildParameterPattern($key);
+		}, $this->route) . ($this->terminated ? '$' : '') . '~i';
+
+	}
+
+
+	/**
+	 * Set whether this route is terminated or not
+	 *
+	 * @param bool $terminated
+	 *
+	 * @return self
+	 */
+	
+	public function setTermination(bool $terminated = true)
 	{
 		$this->terminated = $terminated;
 		return $this;
 	}
 
-	public function getTermination()
+
+	/**
+	 * Gets whether or not this route is terminated or not
+	 *
+	 * @return bool
+	 */
+	
+	public function getTermination() : bool
 	{
 		return $this->terminated;
 	}
@@ -120,21 +160,27 @@ class Route {
 	 * Trys to extract all route variables of a given Url.
 	 * When the route doesen match the Url `null` will be returned.
 	 *
-	 * @param  Url    $url 
+	 * @param ieu\Http\Url $url 
 	 *    The Url to parse
 	 *
-	 * @return [string]|null
+	 * @return array<string>|null
 	 *    The array of route parameters or null if not matching
 	 */
 	
-	public function parse(Url $url)
+	public function parse(Url $url) :? array
 	{
-		$path = rtrim($url->getPath(), '/');
+		// Get path without possible file
+		$path = $url->getPath(false);
 
-		if (preg_match($this->getRoutePattern(), $path, $matches) === 1) {
+		// Build route pattern
+		$pattern = $this->buildRoutePattern();
+
+		if (preg_match($pattern, $path, $matches) === 1) {
+
 			$variables = [];
-			
-			for ($i = 1; $i < sizeof($matches); $i++) {
+			$length = sizeof($matches);
+
+			for ($i = 1; $i < $length; $i++) {
 				$variables[$this->parameter[$i - 1]] = $matches[$i];
 			}
 
@@ -174,5 +220,10 @@ class Route {
 	public function getMethods()
 	{
 		return $this->methods;
+	}
+
+	public function __toString()
+	{
+		return $this->route;
 	}
 }
