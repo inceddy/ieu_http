@@ -13,6 +13,7 @@ namespace ieu\Http;
 use ieu\Http\Reuqest;
 use ieu\Container\Injector;
 use ieu\Container\Container;
+use LogicException;
 
 
 /**
@@ -20,7 +21,7 @@ use ieu\Container\Container;
  */
 
 
-class RouterProvider {
+class RouterProvider extends Router {
 
 	/**
 	 * The Router factory
@@ -29,38 +30,9 @@ class RouterProvider {
 	
 	public $factory;
 
-	/**
-	 * RouteCache
-	 * @var array
-	 */
+	private $constructed = false;
+
 	
-	private $routes = [];
-
-	/**
-	 * The handler that is called when
-	 * no route matches the current request.
-	 * @var array
-	 */
-	
-	private $otherwise;
-
-
-	/**
-	 * The currend route objects
-	 * @var array<ieu\Http\Route>
-	 */
-	
-	private $currentRoutes = [];
-
-
-	/**
-	 * Variable pattern that are valid
-	 * for all Routes.
-	 *
-	 * @var [string]
-	 */
-	
-	private $globalPattern = [];
 
 	/**
 	 * Constructor
@@ -88,117 +60,36 @@ class RouterProvider {
 	
 	public function factory(Injector $injector, Request $request)
 	{
-		$router = new Router($request);
-
-		// Set Routes
-		foreach ($this->routes as $route) {
-			list($routes, $handler) = $route;
-
-			foreach ($routes as $route) {
-				$router->when($route);
-			}
-
-			$router->then(function($parameter, $request) use ($injector, $handler) {
-				return $injector->invoke($handler, ['RouteParameter' => $parameter, 'Request' => $request]);
+		foreach ($this->context as &$context) {
+			array_walk($context[self::ROUTES], function($routeAndHandler) use ($injector) {
+				list(, $handler) = $routeAndHandler;
+				return function($request, $parameter) use ($injector, $handler) {
+					return $injector->invoke($handler, ['RouteParameter' => $parameter, 'Request' => $request]);
+				};
 			});
 		}
 
-		// Set global pattern
-		foreach ($this->globalPattern as $name => $pattern) {
-			$router->validate($name, $pattern);
+		parent::__construct($request);
+		$this->constructed = true;
+
+		return $this;
+	}
+
+	public function route(Route $route, callable $handler)
+	{
+		if ($this->constructed) {
+			throw new LogicException('You cant add another route if provider has been initialized!');
 		}
 
-		// Set default handler
-		if (isset($this->otherwise)) {
-			$handler = $this->otherwise;
-			$router->otherwise(function($request, $error) use ($injector, $handler) {
-				return $injector->invoke($handler, ['Request' => $request, 'Error' => $error]);
-			});
+		return parent::route($route, $handler);
+	}
+
+	public function handle(Url $url) {
+		if (!$this->constructed) {
+			throw new LogicException('You cant call handle an the RouteProvider!');
 		}
 
-		return $router;
-	}
-
-
-	/**
-	 * Adds a route.
-	 *
-	 * @see  ieu\Http\RouterProvider::then()
-	 *
-	 * @param ieu\Http\Route $route
-	 * 
-	 * @return self
-	 * 
-	 */
-	
-	public function when(Route $route)
-	{
-		$this->currentRoutes[] = $route;
-
-		return $this;
-	}
-
-
-	/**
-	 * Sets the handler for the previously set route.
-	 *
-	 * @see  ieu\Http\RouterProvider::when()
-	 *
-	 * @param  callable|array $handler  The callable or the callable wrapped in a 
-	 *                                  dependency array.
-	 *
-	 * @return self
-	 * 
-	 */
-	
-	public function then($handler)
-	{
-		// Wrap handler in dependency array if nessesary
-		$handler = Container::getDependencyArray($handler);
-
-		$this->routes[] = [$this->currentRoutes, $handler];
-		unset($this->currentRoutes);
-
-		return $this;
-	}
-
-
-	/**
-	 * Sets a global variable pattern for the
-	 * given name.
-	 *
-	 * @param  string $name
-	 *     The variable name to validate
-	 * @param  string $pattern
-	 *     The pattern the variable must match
-	 *
-	 * @return self
-	 */
-	
-	public function validate($name, $pattern)
-	{
-		$this->globalPattern[$name] = $pattern;
-		return $this;
-	}
-
-
-	/**
-	 * Sets the handler that is uses if no route matches 
-	 * the current request.
-	 *
-	 * @param  callable|array $handler  The callable or the callable wrapped in a 
-	 *                                  dependency array.
-	 *
-	 * @return self
-	 * 
-	 */
-	
-	public function otherwise($handler) 
-	{
-		$handler = Container::getDependencyArray($handler);
-
-		$this->otherwise = $handler;
-		return $this;
+		return parent::handle($url);
 	}
 }
 

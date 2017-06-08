@@ -142,6 +142,12 @@ class Url {
 	
 	public static function fromUrl($url)
 	{
+		trigger_error('Please use Url::from', E_USER_DEPRECATED);
+		return static::from($url);	
+	}
+
+	public static function from($url)
+	{
 		if (false === $parts = parse_url($url)) {
 			throw new InvalidArgumentException(sprintf('%s is not a valid URL', $url));
 		}
@@ -210,12 +216,12 @@ class Url {
 		return $this;
 	}
 
-	public function getPort()
+	public function getPort() :? int
 	{
 		return $this->port;
 	}
 
-	public function setQuery($query, $append = false)
+	public function setQuery($query, bool $append = false)
 	{
 		if (is_string($query)) {
 			$queryArray = [];
@@ -262,7 +268,7 @@ class Url {
 	 *       
 	 */
 	
-	public function test($pattern)
+	public function test(string $pattern) : bool
 	{
 		return preg_match($pattern, $this->getPath()) === 1;
 	}
@@ -287,12 +293,14 @@ class Url {
 				$path = substr($path, 0, $pos);
 			}
 
-			$this->partials = array_filter(explode('/', $path));
+			$partials = array_filter(explode('/', $path));
 
 			if (false !== strpos($this->last(), '.')) {
-				$this->setFile(array_pop($this->partials));
+				$this->setFile(array_pop($partials));
 			}	
 		}
+
+		$this->partials = $partials;
 
 		return $this;
 	}
@@ -306,7 +314,7 @@ class Url {
 	 * 
 	 */
 	
-	public function getPath($withFile = true)
+	public function getPath(bool $withFile = true) : string
 	{
 		$partials = $this->partials;
 		
@@ -399,7 +407,7 @@ class Url {
 	{
 		$scheme = $this->getScheme();
 		// Combine user and password
-		$user = $this->user ? ($this->pass ? $this->user . ':' . $this->pass . '@' : $this->user . '@') : '';
+		$credentials = $this->user ? ($this->pass ? $this->user . ':' . $this->pass . '@' : $this->user . '@') : '';
 		$host = $this->getHost();
 		$port = $this->getPort();
 		// Don't use the port if its the standard for the current scheme
@@ -411,11 +419,11 @@ class Url {
 		$query = $this->getQuery();
 		$fragment = $this->getFragment();
 
-		return sprintf('%s://%s%s%s/%s%s%s',
+		return rtrim(sprintf('%s://%s%s%s/%s%s%s',
 			// Scheme
 			$scheme,
-			// User
-			$user,
+			// Credentials
+			$credentials,
 			// Host
 			$host,
 			// Port
@@ -426,6 +434,6 @@ class Url {
 			$query ? '?' . $query : '',
 			// Fragment
 			$fragment ? '#' . $fragment : ''
-		);
+		), '/');
 	}
 }

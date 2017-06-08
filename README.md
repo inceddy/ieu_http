@@ -24,11 +24,18 @@ URL path description, including variables, variable validation and wildcardpatte
 $route1 = (new Route('/path/to/user/{id}'))
 	->validate('id', '\d+');
 
+// or shorthand
+
+$route1 = (new Route('/path/to/user/{id|\d+}'));
+
 // {everything} matches all allowed chars.
 $route2 = new Route('/path/to/{everything}/update');
 
 // Will match every route beginning with /path/to/
 $route3 = new Route('/path/to/*')
+
+// Will match every route beginning with /path/to/some_id and /path/to
+$route3 = new Route('/path/to/{id?}')
 ```
 
 ## RouterProvider
@@ -43,10 +50,11 @@ additional to `Request` (the current request) and `RouteParameter` (all variable
 	->provider('Router', new ieu\Http\RouterProvier)
 	->config(['RouterProvider', function($routerProvider){
 		$routerProvider
-			->when(Route('/'))
-			->when(Route('/home'))
-			->then(['Request', 'RouteParameter', function($request, $parameter){
+			->get('/home', ['Request', 'RouteParameter', function($request, $parameter){
 				return new Response('This is the homepage ');
+			})
+			->otherwise(['Request', 'Error', function($request, $error) {
+				// handle error
 			});
 	}]);
 
@@ -54,9 +62,7 @@ additional to `Request` (the current request) and `RouteParameter` (all variable
 (new ieu\App)
 	->config(['RouterProvider', function($routerProvider){
 		$routerProvider
-			->when(Route('/'))
-			->when(Route('/home'))
-			->then(['Request', 'RouteParameter', function($request, $parameter){
+			->get('/home', ['Request', 'RouteParameter', function($request, $parameter){
 				return new Response('This is the homepage ');
 			});
 	}]);
