@@ -61,9 +61,15 @@ class RouterProvider extends Router {
 	public function factory(Injector $injector, Request $request)
 	{
 		foreach ($this->context as &$context) {
-			array_walk($context[self::ROUTES], function($routeAndHandler) use ($injector) {
+			if (isset($context[self::DEFAULT])) {
+				$context[self::DEFAULT] = function($request, $error) use ($injector) {
+
+				};
+			}
+			
+			array_walk($context[self::ROUTES], function(&$routeAndHandler) use ($injector) {
 				list(, $handler) = $routeAndHandler;
-				return function($request, $parameter) use ($injector, $handler) {
+				$routeAndHandler[1] = function($request, $parameter) use ($injector, $handler) {
 					return $injector->invoke($handler, ['RouteParameter' => $parameter, 'Request' => $request]);
 				};
 			});
