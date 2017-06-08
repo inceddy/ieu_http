@@ -21,21 +21,18 @@ URL path description, including variables, variable validation and wildcardpatte
 ### Usage
 ```php
 // {id} matches didgits of all length
-$route1 = (new Route('/path/to/user/{id}'))
+$route1a = (new Route('/path/to/user/{id}'))
 	->validate('id', '\d+');
 
 // or shorthand
 
-$route1 = (new Route('/path/to/user/{id|\d+}'));
+$route1b = (new Route('/path/to/user/{id|\d+}'));
 
 // {everything} matches all allowed chars.
 $route2 = new Route('/path/to/{everything}/update');
 
 // Will match every route beginning with /path/to/
 $route3 = new Route('/path/to/*')
-
-// Will match every route beginning with /path/to/some_id and /path/to
-$route3 = new Route('/path/to/{id?}')
 ```
 
 ## RouterProvider
