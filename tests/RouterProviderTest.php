@@ -7,25 +7,35 @@ use ieu\Http\RouterProvider;
  */
 class RouterProviderTest extends \PHPUnit_Framework_TestCase {
 
-	public function setUp()
+	public function getContainer()
 	{
-		$this->container = new ieu\Container\Container;
-		$this->container->factory('Request', [function(){
-			$request = new RequestMock();
-			$request->setUrl('http://steingrebe.de/prefix/test');
-
+		return (new ieu\Container\Container)
+		->factory('Request', [function(){
+			$request = $this->getMockBuilder(ieu\Http\Request::CLASS)->getMock();
+			$request->method('getUrl')->willReturn(
+				ieu\Http\Url::from('http://steingrebe.de/prefix/test')
+			);
+			$request->method('isMethod')->willReturn(true);
 			return $request;
-		}]);
-		$this->container->value('TestValue', 'test-value');
-		$this->container->provider('Router', new RouterProvider);
+		}])
+		->value('TestValue', 'test-value')
+		->provider('Router', new RouterProvider);
+	}
+
+	public function testInstanceSetup()
+	{
+		$container = $this->getContainer();
+		$this->assertInstanceOf(RouterProvider::CLASS, $container['Router']);
 	}
 
 	public function testRouting()
 	{
-		$this->container->config(['RouterProvider', function($router) {
+		$container = $this->getContainer();
+
+		$container->config(['RouterProvider', function($router) {
 			$test = $this;
 			$router->get('prefix/{id}', ['Request', 'RouteParameter', 'TestValue', function($request, $parameter, $testValue) use ($test) {
-				$test->assertInstanceOf(RequestMock::CLASS, $request);
+				$this->assertTrue(is_object($request));
 				$test->assertEquals(['id' => 'test'], $parameter);
 				$this->assertEquals('test-value', $testValue);
 
@@ -33,8 +43,23 @@ class RouterProviderTest extends \PHPUnit_Framework_TestCase {
 			}]);
 		}]);
 
-		$this->assertInstanceOf(RouterProvider::CLASS, $this->container['Router']);
 
-		$this->container['Router']->handle();
+		$container['Router']->handle();
+	}
+
+	public function testDefaultHandler()
+	{
+		$container = $this->getContainer();
+
+		$container->config(['RouterProvider', function($router) {
+			$test = $this;
+			$router->otherwise(['Request', 'Error', 'TestValue', function($request, $error, $testValue){
+				$this->assertTrue(is_object($request));
+				$test->assertNull($error);
+				$this->assertEquals('test-value', $testValue);
+			}]);
+		}]);
+
+		$container['Router']->handle();
 	}
 }

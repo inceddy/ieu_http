@@ -237,7 +237,7 @@ class Router {
 	 * 
 	 */
 	
-	public function otherwise(callable $defaultHandler)
+	public function otherwise($defaultHandler)
 	{
 		$this->currentContext[self::DEFAULT] = $defaultHandler;
 		return $this;
