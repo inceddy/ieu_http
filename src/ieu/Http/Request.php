@@ -514,6 +514,6 @@ class Request {
             throw new \Exception('The reuqest URI is unknown.');
         }
 
-        return Url::fromUrl($url);
+        return Url::from($url);
     }
 }
