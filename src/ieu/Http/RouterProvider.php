@@ -64,12 +64,14 @@ class RouterProvider extends Router {
 		$this->request = $request;
 
 		foreach ($this->context as &$context) {
-			if (isset($context[self::DEFAULT])) {
-				$context[self::DEFAULT] = function($request, $error) use ($injector) {
-
+			// Wrap default callbacks
+			if (null !== $handler = &$context[self::DEFAULT]) {
+				$handler = function($request, $error) use ($injector, $handler) {
+					return $injector->invoke($handler, ['Request' => $request, 'Error' => $error]);
 				};
 			}
 
+			// Wrap route handlers
 			array_walk($context[self::ROUTES], function(&$routeAndHandler) use ($injector) {
 				list(, $handler) = $routeAndHandler;
 				$routeAndHandler[1] = function($request, $parameter) use ($injector, $handler) {
