@@ -1,8 +1,8 @@
 *.sublime-workspace
 *.sublime-project
 *.local.*
-\_*
+/_*
 Thumbs.db
 composer.lock
-/
-vendor/
+/tmp/
+/vendor/
