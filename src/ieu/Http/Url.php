@@ -20,10 +20,16 @@ use InvalidArgumentException;
 
 class Url {
 
-	private static $portSchemeMap = [
+	private const PORT_SCHEME_MAP = [
 		21  => 'ftp',
 		80  => 'http',
 		443 => 'https',
+	];
+
+	private const SCHEME_PORT_MAP = [
+		'ftp'   => 21,
+		'http'  => 80,
+		'https' => 443
 	];
 
 
@@ -119,6 +125,10 @@ class Url {
 			'fragment' => ''
 		], $parts);
 
+		if (empty($parts['scheme']) || empty($parts['host'])) {
+			throw new InvalidArgumentException('Scheme and/or host are required parts by every url');
+		}
+
 		$this->setScheme($parts['scheme']);
 		$this->setUser($parts['user']);
 		$this->setPassword($parts['pass']);
@@ -130,6 +140,19 @@ class Url {
 	}
 
 	/**
+	 * Deprecated. 
+	 * Use Url::from instead.
+	 * 
+	 * @codeCoverageIgnore
+	 */
+	public static function fromUrl($url)
+	{
+		trigger_error('Please use Url::from', E_USER_DEPRECATED);
+		return static::from($url);	
+	}
+
+
+	/**
 	 * Parses an URL string to an ieu\Http\Url object. 
 	 *
 	 * @throws InvalidArgumentException if $url is not a valid URL
@@ -139,45 +162,51 @@ class Url {
 	 * @return ieu\Http\Url  the URL object
 	 * 
 	 */
-	
-	public static function fromUrl($url)
-	{
-		trigger_error('Please use Url::from', E_USER_DEPRECATED);
-		return static::from($url);	
-	}
 
-	public static function from($url)
+	public static function from(string $url)
 	{
-		if (false === $parts = parse_url($url)) {
+		if ((false === $parts = parse_url($url)) || 
+			  0 === preg_match('@^[a-z0-9-_]+://(-\.)?([^\s/?\.#]+\.?)+(/[^\s]*)?$@i', $url)) {
 			throw new InvalidArgumentException(sprintf('%s is not a valid URL', $url));
 		}
 
 		return new static($parts);
 	}
 
-	public function setScheme($scheme)
+	public function setScheme(string $scheme, $autoPort = true)
 	{
 		$this->scheme = $scheme;
+
+		if ($autoPort && $port = self::SCHEME_PORT_MAP[$scheme] ?? null) {
+			$this->setPort($port);
+		}
+
 		return $this;
 	}
 
-	public function getScheme()
+	public function getScheme() : string
 	{
 		return $this->scheme;
 	}
 
-	public function setUser($user)
+	public function setUser(string $user = null)
 	{
 		$this->user = $user;
+
+		// Unset password when user is unset
+		if (null === $user) {
+			$this->setPassword(null);
+		}
+
 		return $this;
 	}
 
-	public function getUser()
+	public function getUser() :? string 
 	{
 		return $this->user;
 	}
 
-	public function setPassword($password)
+	public function setPassword(string $password = null) :? string
 	{
 		$this->pass = $password;
 		return $this;
@@ -199,20 +228,16 @@ class Url {
 		return $this->host;
 	}
 
-	public function setPort($port)
+	public function setPort(int $port = null, $autoScheme = true)
 	{
-		if (null === $port) {
+		if (null === $port && $autoScheme) {
 			$scheme = $this->getScheme();
-			if (false === $port = array_search($scheme, static::$portSchemeMap)) {
+			if (false === $port = array_search($scheme, self::PORT_SCHEME_MAP)) {
 				$port = null;
 			}
 		}
 
-		elseif (!filter_var($port, FILTER_VALIDATE_INT)) {
-			throw new InvalidArgumentException('Port must be type of integer, %s given.', gettype($port));
-		}
-
-		$this->port = (int)$port;
+		$this->port = $port;
 		return $this;
 	}
 
@@ -289,13 +314,13 @@ class Url {
 			$path = trim($path, '/');
 
 			if (false !== $pos = strpos($path, '?')) {
-				$this->setQuery(substr($this->path, $pos + 1));
+				$this->setQuery(substr($path, $pos + 1));
 				$path = substr($path, 0, $pos);
 			}
 
 			$partials = array_filter(explode('/', $path));
 
-			if (false !== strpos($this->last(), '.')) {
+			if (false !== strpos(end($partials), '.')) {
 				$this->setFile(array_pop($partials));
 			}	
 		}
@@ -411,9 +436,8 @@ class Url {
 		$host = $this->getHost();
 		$port = $this->getPort();
 		// Don't use the port if its the standard for the current scheme
-		if (null === $port || 
-			isset(static::$portSchemeMap[$port]) && static::$portSchemeMap[$port] == $scheme) {
-			$port = '';
+		if ($port !== null && isset(self::PORT_SCHEME_MAP[$port]) && self::PORT_SCHEME_MAP[$port] == $scheme) {
+			$port = null;
 		}
 		$path = $this->getPath();
 		$query = $this->getQuery();
@@ -427,7 +451,7 @@ class Url {
 			// Host
 			$host,
 			// Port
-			$port,
+			is_null($port) ? '' : ':' . $port ,
 			// Path
 			$path,
 			// Query
