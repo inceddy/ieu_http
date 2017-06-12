@@ -266,6 +266,33 @@ class Router {
 	}
 
 	/**
+	 * Transforms any primitive handler result to a response
+	 *
+	 * @param  mixed $result
+	 *    The handler result to be transformed
+	 *
+	 * @return ieu\Http\Response
+	 *    The response
+	 */
+	
+	private function resultToResponse($result)
+	{
+		switch (true) {
+			// Response object
+			case $result instanceof Response:
+				return $result;
+			// String -> transform to response
+			case is_string($result) || is_numeric($result):
+				return new Response($result);
+			// Array -> transform to json response
+			case is_array($result) || is_object($result):
+				return new JsonResponse($result);
+			default:
+				throw new Exception('Invalid route handler return value');
+		}
+	}
+
+	/**
 	 * Trys to match a route against the current request.
 	 *
 	 * @throws \Exception
@@ -308,23 +335,13 @@ class Router {
 				try {
 					$result = $this->composeMiddleware($context[self::MIDDLEWARE])($handler)($this->request, $parameter);
 
-					switch (true) {
-						// Nothing returned -> continue
-						case is_null($result):
-							continue;
-						// Response object
-						case $result instanceof Response:
-							return $result;
-						// String -> transform to response
-						case is_string($result) || is_numeric($result):
-							return new Response($result);
-						// Array -> transform to json response
-						case is_array($result) || is_object($result):
-							return new JsonResponse($result);
-
-						default:
-							throw new Exception('Invalid route return value');
+					// Call next handler if `null` was returned
+					if (null === $result) {
+						continue;
 					}
+
+					return $this->resultToResponse($result);
+
 				} catch(Exception $e) {
 					$error = $e;
 					break 2;
@@ -333,15 +350,22 @@ class Router {
 
 			// Use context default handler
 			if (isset($context[self::DEFAULT])) {
-				return call_user_func($context[self::DEFAULT], $this->request, $error);
+				if (null === $result = call_user_func($context[self::DEFAULT], $this->request, $error)) {
+					continue;
+				}
+
+				return $this->resultToResponse($result);
 			}
 		}
 
 		// Use default context default handler
 		if (isset($this->context[0][self::DEFAULT])) {
-			return call_user_func($this->context[0][self::DEFAULT], $this->request, $error);
+			return $this->resultToResponse(
+				call_user_func($this->context[0][self::DEFAULT], $this->request, $error)
+			);
 		}
 
+		// If no handler takes
 		if (null !== $error) {
 			throw $error;
 		}

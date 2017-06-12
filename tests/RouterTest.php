@@ -3,8 +3,10 @@
 use ieu\Http\Router;
 use ieu\Http\Route;
 use ieu\Http\Request;
+use ieu\Http\Response;
+use ieu\Http\Url;
 
-require __DIR__ . '/fixtures/RequestMock.php';
+// Load middleware class
 require __DIR__ . '/fixtures/Middleware.php';
 
 /**
@@ -14,7 +16,10 @@ class RouterTest extends \PHPUnit_Framework_TestCase {
 
 	public function setUp()
 	{
-		$this->request = (new RequestMock)->setUrl('http://steingrebe.de/prefix/test?some=value#hash');
+		// Mock request
+		$this->request = $this->getMockBuilder(Request::CLASS)->getMock();
+		$this->request->method('getUrl')->willReturn(Url::from('http://steingrebe.de/prefix/test?some=value#hash'));
+		$this->request->method('isMethod')->willReturn(true);
 	}
 
   /**
@@ -99,7 +104,7 @@ class RouterTest extends \PHPUnit_Framework_TestCase {
 			->get('prefix/test', function($arg1, $arg2, $request, $params) use ($test) {
 				$this->assertEquals('test', $arg1);
 				$this->assertEquals('test', $arg2);
-				$this->assertInstanceOf(RequestMock::CLASS, $request);
+				$this->assertInstanceOf(Request::CLASS, $request);
 				$this->assertEquals([], $params);
 				return 'Middleware Response!';
 			})
@@ -113,6 +118,7 @@ class RouterTest extends \PHPUnit_Framework_TestCase {
 			->otherwise(function() use ($test) {
 				// Default handler is called
 				$test->assertTrue(true);
+				return 'not-empty-result';
 			})
 			->get('prefix/test', function() use ($test) {
 				// Handler gets called but has no result
@@ -124,16 +130,20 @@ class RouterTest extends \PHPUnit_Framework_TestCase {
 	public function testDefaultHandlerOnMissingMatch()
 	{
 		$test = $this;
+		$response = 
 		(new Router($this->request))
 			->otherwise(function() use ($test) {
 				// Default handler is called
 				$test->assertTrue(true);
+				return 'not-empty-result';
 			})
 			->get('this/does/not/match', function() use ($test) {
 				// Handler gets called never called!
 				$test->assertTrue(false);
 			})
 			->handle();
+
+		$this->assertInstanceOf(Response::CLASS, $response);
 	}
 
 	public function testDefaultHandlerOnException()
@@ -143,6 +153,7 @@ class RouterTest extends \PHPUnit_Framework_TestCase {
 			->otherwise(function($request, $exception) use ($test) {
 				$test->assertInstanceOf(Exception::CLASS, $exception);
 				$test->assertEquals('Route error', $exception->getMessage());
+				return 'not-empty-result';
 			})
 			->get('prefix/test', function() use ($test) {
 				throw new Exception('Route error');
