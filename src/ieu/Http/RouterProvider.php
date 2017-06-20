@@ -104,7 +104,7 @@ class RouterProvider extends Router {
 	}
 
 	public function context($handler) {
-		parent::context(function() use ($handler) {
+		return parent::context(function() use ($handler) {
 			return $this->injector->invoke(
 				Container::getDependencyArray($handler)
 			);
