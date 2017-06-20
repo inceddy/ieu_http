@@ -312,7 +312,7 @@ class Router {
 		$error = null;
 
 		// Loop over all context
-		foreach ($this->context as &$context) {
+		foreach ($this->context as $contextIndex => &$context) {
 			$this->currentContext = &$context;
 
 			// Invoke context
@@ -359,7 +359,7 @@ class Router {
 			}
 
 			// Use context default handler
-			if (isset($context[self::DEFAULT])) {
+			if ($contextIndex > 0 && isset($context[self::DEFAULT])) {
 				if (null === $result = call_user_func($context[self::DEFAULT], $this->request, $error)) {
 					continue;
 				}
