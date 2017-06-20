@@ -30,9 +30,20 @@ class RouterProvider extends Router {
 	
 	public $factory;
 
-	private $constructed = false;
 
+	/**
+	 * The injector used to resolve depedencies
+	 * @var ieu\Container\Injector
+	 */
 	
+	private $injector;
+
+	/**
+	 * Whether this provider is constructed or not
+	 * @var boolean
+	 */
+
+	private $constructed = false;
 
 	/**
 	 * Constructor
@@ -45,8 +56,9 @@ class RouterProvider extends Router {
 	
 	public function __construct()
 	{
-		$this->currentContext = &$this->addContext();
-		$this->factory = ['Injector', 'Request', [$this, 'factory']];
+		$this->addContext();
+		$this->currentContext = &$this->context[0];
+		$this->factory = ['Injector', 'Request', 'Container', [$this, 'factory']];
 	}
 
 
@@ -61,25 +73,8 @@ class RouterProvider extends Router {
 	
 	public function factory(Injector $injector, Request $request)
 	{
-		$this->request = $request;
-
-		foreach ($this->context as &$context) {
-			// Wrap default callbacks
-			if (null !== $handler = &$context[self::DEFAULT]) {
-				$handler = function($request, $error) use ($injector, $handler) {
-					return $injector->invoke($handler, ['Request' => $request, 'Error' => $error]);
-				};
-			}
-
-			// Wrap route handlers
-			array_walk($context[self::ROUTES], function(&$routeAndHandler) use ($injector) {
-				list(, $handler) = $routeAndHandler;
-				$routeAndHandler[1] = function($request, $parameter) use ($injector, $handler) {
-					return $injector->invoke($handler, ['RouteParameter' => $parameter, 'Request' => $request]);
-				};
-			});
-		}
-
+		$this->request   = $request;
+		$this->injector  = $injector;
 		$this->constructed = true;
 
 		return $this;
@@ -100,16 +95,58 @@ class RouterProvider extends Router {
 			throw new LogicException('You cant add another route if provider has been initialized!');
 		}
 
-		$this->currentContext[self::ROUTES][] = [$route, $handler];
-		return $this;
+		return parent::route($route, function($request, $parameter) use ($handler) {
+			return $this->injector->invoke(
+				Container::getDependencyArray($handler), 
+				['RouteParameter' => $parameter, 'Request' => $request]
+			);
+		});
 	}
 
+	public function context($handler) {
+		parent::context(function() use ($handler) {
+			return $this->injector->invoke(
+				Container::getDependencyArray($handler)
+			);
+		});
+	}
+
+	public function otherwise($handler)
+	{
+		parent::otherwise(function($request, $error) use ($handler) {
+			return $this->injector->invoke(
+				Container::getDependencyArray($handler), 
+				['Request' => $request, 'Error' => $error]
+			);
+		});
+	}
+
+
+	/**
+	 * Overload handle to ensure that this method is 
+	 * only called on an instance and not on the provider.
+	 *
+	 * @return mixed
+	 */
+	
 	public function handle() {
 		if (!$this->constructed) {
-			throw new LogicException('You cant call handle an the RouteProvider!');
+			throw new LogicException('You cant call handle in config state.');
 		}
 
 		return parent::handle();
 	}
-}
 
+
+	/**
+	 * This method should be used to access the container 
+	 * in a context closure.
+	 *
+	 * @return ieu\Container\Container
+	 */
+
+	public function getContainer() :? Container
+	{
+		return $this->container;
+	}
+}

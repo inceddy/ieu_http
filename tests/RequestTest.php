@@ -58,4 +58,11 @@ class RequestTest extends \PHPUnit_Framework_TestCase {
 	public function testSession()
 	{
 	}
+
+	public function testMethod()
+	{
+		$request = Request::native();
+		$this->assertNull($request->getMethod());
+		$this->assertEquals('unknown', $request->getMethodName());
+	}
 }

@@ -27,6 +27,7 @@ class Router {
 	protected const MIDDLEWARE        = 2;
 	protected const DEFAULT           = 3;
 	protected const PARAMETER_PATTERN = 4;
+	protected const CONTEXT_HANDLER   = 5;
 
 	/**
 	 * The current request handled by this router
@@ -72,17 +73,19 @@ class Router {
 	public function __construct(Request $request)
 	{
 		$this->request = $request;
-		$this->currentContext = &$this->addContext();
+		$this->addContext();
+		$this->currentContext = &$this->context[0];
 	}
 
-	protected function &addContext()
+	protected function addContext(Closure $handler = null)
 	{
 		$this->context[] = [
 			self::ROUTES            => [],
 			self::MIDDLEWARE        => [],
 			self::PREFIX            => null,
 			self::DEFAULT           => null,
-			self::PARAMETER_PATTERN => []
+			self::PARAMETER_PATTERN => [],
+			self::CONTEXT_HANDLER   => $handler
 		];
 
 		return $this->context[sizeof($this->context) - 1];
@@ -118,17 +121,17 @@ class Router {
 		return $this->request;
 	}
 
-	public function context(Closure $handler) {
-		// Add new group context
-		$this->currentContext = &$this->addContext();
-		Closure::bind($handler, $this)();
-		// Reset to default context
-		$this->currentContext = &$this->context[sizeof($this->context) - 1];
+	public function context($handler) {
+		if (!$handler instanceof Closure) {
+			throw new InvalidArgumentException('Context handler must be instance of Closure.');
+		}
 
+		// Add new group context
+		$this->addContext(Closure::bind($handler, $this));
 		return $this;
 	}
 
-	public function middleware(callable ...$middlewares)
+	public function middleware(...$middlewares)
 	{
 		$this->currentContext[self::MIDDLEWARE] = array_merge($this->currentContext[self::MIDDLEWARE], $middlewares);
 		return $this;
@@ -309,7 +312,14 @@ class Router {
 		$error = null;
 
 		// Loop over all context
-		foreach ($this->context as $context) {
+		foreach ($this->context as &$context) {
+			$this->currentContext = &$context;
+
+			// Invoke context
+			if (null !== $invoker = $context[self::CONTEXT_HANDLER]) {
+				$invoker();
+			}
+
 			foreach ($context[self::ROUTES] as $routeAndHandler) {
 				list($route, $handler) = $routeAndHandler;
 

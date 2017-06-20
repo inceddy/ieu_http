@@ -5,6 +5,8 @@ use ieu\Http\Response;
 use ieu\Http\Request;
 use ieu\Http\Url;
 
+use ieu\Container\Container;
+
 /**
  * @author  Philipp Steingrebe <philipp@steingrebe.de>
  */
@@ -12,7 +14,7 @@ class RouterProviderTest extends \PHPUnit_Framework_TestCase {
 
 	public function getContainer()
 	{
-		return (new ieu\Container\Container)
+		return (new Container)
 		->factory('Request', [function(){
 			// Mock request
 			$request = $this->getMockBuilder(Request::CLASS)->getMock();
@@ -30,7 +32,7 @@ class RouterProviderTest extends \PHPUnit_Framework_TestCase {
 		$this->assertInstanceOf(RouterProvider::CLASS, $container['Router']);
 	}
 
-	public function testRouting()
+	public function testRoutingAcceptsDependencies()
 	{
 		$container = $this->getContainer();
 
@@ -49,7 +51,7 @@ class RouterProviderTest extends \PHPUnit_Framework_TestCase {
 		$container['Router']->handle();
 	}
 
-	public function testDefaultHandler()
+	public function testDefaultHandlerAcceptsDependencies()
 	{
 		$container = $this->getContainer();
 
@@ -67,5 +69,19 @@ class RouterProviderTest extends \PHPUnit_Framework_TestCase {
 		$response = $container['Router']->handle();
 
 		$this->assertInstanceOf(Response::CLASS, $response);
+	}
+
+	public function testContextAcceptsDependencies()
+	{
+		$container = $this->getContainer();
+
+		$container->config(['RouterProvider', function($router) {
+			$test = $this;
+			$router->context(['TestValue', function($testValue){
+				$this->assertEquals('test-value', $testValue);
+			}]);
+		}]);
+
+		$response = $container['Router'];
 	}
 }
