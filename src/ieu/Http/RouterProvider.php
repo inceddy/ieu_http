@@ -91,10 +91,6 @@ class RouterProvider extends Router {
 	
 	public function route(Route $route, $handler)
 	{
-		if ($this->constructed) {
-			throw new LogicException('You cant add another route if provider has been initialized!');
-		}
-
 		return parent::route($route, function($request, $parameter) use ($handler) {
 			return $this->injector->invoke(
 				Container::getDependencyArray($handler), 
