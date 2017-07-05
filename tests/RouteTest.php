@@ -13,7 +13,7 @@ class RouteTest extends \PHPUnit_Framework_TestCase {
     $this->url = $this->getMockBuilder(ieu\Http\Url::CLASS)
          ->getMock();
 
-    $this->url->method('getPath')
+    $this->url->method('path')
          ->willReturn('test/path/user123');
   }
 
@@ -51,7 +51,7 @@ class RouteTest extends \PHPUnit_Framework_TestCase {
   {
     $url = $this->getMockBuilder(ieu\Http\Url::CLASS)
         ->getMock();
-        $url->method('getPath')
+        $url->method('path')
             ->willReturn('test/path/p200x300');
 
     $route = (new Route('test/path/p{width}x{height}'))
@@ -64,7 +64,7 @@ class RouteTest extends \PHPUnit_Framework_TestCase {
   public function testTermination()
   {
     $url = $this->getMockBuilder(ieu\Http\Url::CLASS)->getMock();
-    $url->method('getPath')->willReturn('test/path/is/very/long');
+    $url->method('path')->willReturn('test/path/is/very/long');
 
     $route = new Route('test/path*');
     $this->assertEquals([], $route->parse($url));
@@ -73,7 +73,7 @@ class RouteTest extends \PHPUnit_Framework_TestCase {
   public function testShorthandValidation()
   {
     $url = $this->getMockBuilder(ieu\Http\Url::CLASS)->getMock();
-    $url->method('getPath')->willReturn('test/path/123');
+    $url->method('path')->willReturn('test/path/123');
 
     $route = new Route('test/path/{id|\d+}');
     $this->assertEquals(['id' => '123'], $route->parse($url));

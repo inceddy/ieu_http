@@ -79,10 +79,12 @@ class UrlTest extends \PHPUnit_Framework_TestCase {
 		$urlString = 'https://example.com/some/path/somefile.php?id=some_id&cache=false#anchor';
 		$urlObject = Url::from($urlString);
 
-		$this->assertEquals('anchor', $urlObject->getFragment());
+		$this->assertEquals('anchor', $urlObject->fragment());
 
-		$urlObject->setFragment('anchor2');
-		$this->assertEquals('anchor2', $urlObject->getFragment());
+		$newUrlObject = $urlObject->withFragment('anchor2');
+
+		$this->assertNotEquals($urlObject, $newUrlObject);
+		$this->assertEquals('anchor2', $newUrlObject->fragment());
 	}
 
 	public function testQuery()
@@ -90,66 +92,61 @@ class UrlTest extends \PHPUnit_Framework_TestCase {
 		$urlString = 'http://test.de';
 		$urlObject = Url::from($urlString);
 
-		$urlObject->setQuery(['a' => 1, 'b' => 2]);
-		$this->assertEquals('http://test.de/?a=1&b=2', (string) $urlObject);
+		$newUrlObject = $urlObject->withQuery(['a' => 1, 'b' => 2]);
 
-		$urlObject->appendQuery(['c' => 3]);
-		$this->assertEquals('http://test.de/?a=1&b=2&c=3', (string) $urlObject);
+		$this->assertNotEquals($urlObject, $newUrlObject);
+		$this->assertEquals('http://test.de/?a=1&b=2', (string) $newUrlObject);
+
+		$newerUrlObject = $newUrlObject->withMergedQuery(['c' => 3]);
+
+		$this->assertNotEquals($newUrlObject, $newerUrlObject);
+		$this->assertEquals('http://test.de/?a=1&b=2&c=3', (string) $newerUrlObject);
 
 		// Reset by array
-		$clone = clone $urlObject;
-		$clone->setQuery([]);
+		$clone = $urlObject->withQuery([]);
 		$this->assertEquals('http://test.de', (string) $clone);
 
 		// Reset by string
-		$clone = clone $urlObject;
-		$clone->setQuery('');
+		$clone = $urlObject->withQuery('');
 		$this->assertEquals('http://test.de', (string) $clone);
 
 		// Append to empty
-		$clone->appendQuery(['c' => 3]);
+		$clone = $clone->withMergedQuery(['c' => 3]);
 		$this->assertEquals('http://test.de/?c=3', (string) $clone);
 
 		// Test dubble
-		$urlObject = Url::from('http://test.de/?a=1');
-		$urlObject->appendQuery(['a' => 2]);
+		$urlObject = Url::from('http://test.de/?a=1')->withMergedQuery(['a' => 2]);
 		$this->assertEquals('http://test.de/?a=2', (string)$urlObject);
-
-		// Test object
-		$clone = clone $urlObject;
-		$clone->setQuery((object)['a' => 1]);
-		$this->assertEquals('http://test.de/?a=1', (string) $clone);
-	}
-
-	public function testFile()
-	{
-		$urlString = 'https://example.com/some/path/somefile.php';
-		$urlObject = Url::from($urlString);
-
-		$this->assertEquals('somefile.php', $urlObject->getFile());
-
-		$urlObject->setFile('somefile2.php');
-		$this->assertEquals('somefile2.php', $urlObject->getFile());
 	}
 
 	public function testPath()
 	{
-		$urlObject = Url::from('https://example.com/some/path/long/somefile.php');
-		$this->assertTrue($urlObject->test('/^some\/path/'));
+		$url = Url::from('https://example.com/some/path/long');
+		$this->assertTrue($url->test('/^some\/path/'));
 
-		$this->assertEquals('some', $urlObject->first());
+		$this->assertEquals('some', $url->first());
 
-		$this->assertEquals('path', $urlObject->nth(1));
+		$this->assertEquals('path', $url->nth(1));
 
-		$this->assertEquals('long', $urlObject->last());
+		$this->assertEquals('long', $url->last());
 
-		// Path with query
-		$urlObject->setPath('some/path/newfile.php?a=b');
+		$this->assertEquals(3, $url->length());
 
-		$this->assertEquals('newfile.php', $urlObject->getFile());
-		$this->assertEquals('a=b', $urlObject->getQuery());
+		$this->assertEquals('some/path/long', $urlObject->path());
 
-		$this->assertEquals(2, $urlObject->length());
+		$this->assertEquals(['some', 'path', 'long'], $urlObject->pathArray());
+
+
+		$url = 'https://example.com/some/path/long';
+
+		$this->assertEquals('https://example.com/some/path', (string)Url::from($url)->withPath('some/path'));
+		$this->assertEquals('https://example.com/some/path', (string)Url::from($url)->withPath(['some', 'path']));
+
+		$this->assertEquals('https://example.com/prefix/some/path/long', (string)Url::from($url)->withPathPrepend(['prefix']));
+		$this->assertEquals('https://example.com/prefix/some/path/long', (string)Url::from($url)->withPathPrepend('prefix'));
+
+		$this->assertEquals('https://example.com/some/path/long/suffix', (string)Url::from($url)->withPathAppend(['suffix']));
+		$this->assertEquals('https://example.com/some/path/long/suffix', (string)Url::from($url)->withPathAppend('suffix'));
 	}
 
 	public function testScheme()
@@ -157,7 +154,7 @@ class UrlTest extends \PHPUnit_Framework_TestCase {
 		$urlString = 'https://example.com/some/path/somefile.php';
 		$urlObject = Url::from($urlString);
 
-		$this->assertEquals('https', $urlObject->getScheme());
+		$this->assertEquals('https', $urlObject->scheme());
 	}
 
 	public function testCredentials()
@@ -165,19 +162,19 @@ class UrlTest extends \PHPUnit_Framework_TestCase {
 		$urlString = 'https://username:password@example.com/some/path';
 		$urlObject = Url::from($urlString);
 
-		$this->assertEquals('username', $urlObject->getUser());
-		$this->assertEquals('password', $urlObject->getPassword());
+		$this->assertEquals('username', $urlObject->user());
+		$this->assertEquals('password', $urlObject->password());
 
-		$urlObject->setUser('username2');
-		$urlObject->setPassword('password2');
+		$newUrlObject = $urlObject->withUserAndPassword('username2', 'password2');
 
-		$this->assertEquals('username2', $urlObject->getUser());
-		$this->assertEquals('password2', $urlObject->getPassword());
+		$this->assertNotEquals($urlObject, $newUrlObject);
+		$this->assertEquals('username2', $newUrlObject->user());
+		$this->assertEquals('password2', $newUrlObject->password());
 
 		// Unsetting user auto unsets password
-		$urlObject->setUser();
-		$this->assertEquals(null, $urlObject->getUser());
-		$this->assertEquals(null, $urlObject->getPassword());
+		$newUrlObject = $urlObject->withUser(null);
+		$this->assertEquals(null, $newUrlObject->user());
+		$this->assertEquals(null, $newUrlObject->password());
 	}
 
 	public function testPort()
@@ -185,18 +182,20 @@ class UrlTest extends \PHPUnit_Framework_TestCase {
 		$urlString = 'https://some-server.de:8000';
 		$urlObject = Url::from($urlString);
 
-		$this->assertEquals('8000', $urlObject->getPort());
+		$this->assertEquals(8000, $urlObject->port());
 
 		// Change port
-		$urlObject->setPort('8080');
-		$this->assertEquals('8080', $urlObject->getPort());
+		$newUrlObject = $urlObject->withPort('8080');
+
+		$this->assertNotEquals($urlObject, $newUrlObject);
+		$this->assertEquals(8080, $newUrlObject->port());
 
 		// Remove known ports if matching with scheme
-		$urlObject->setPort('443');
-		$this->assertEquals('https://some-server.de', (string)$urlObject);
+		$newUrlObject = $urlObject->withPort('443');
+		$this->assertEquals('https://some-server.de', (string)$newUrlObject);
 
-		$urlObject->setScheme('ftp');
-		$this->assertEquals(21, $urlObject->getPort());
+		$newUrlObject = $urlObject->withScheme('ftp');
+		$this->assertEquals(21, $newUrlObject->port());
 	}
 
 
@@ -209,6 +208,6 @@ class UrlTest extends \PHPUnit_Framework_TestCase {
 		$urlString = 'https://some-server.de:8000';
 		$urlObject = Url::from($urlString);
 
-		$urlObject->setPort('nonesense');
+		$urlObject->withPort('nonesense');
 	}
 }

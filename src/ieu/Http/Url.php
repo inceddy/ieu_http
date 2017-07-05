@@ -54,7 +54,7 @@ class Url {
 	 * @var string|null
 	 */
 	
-	protected $pass;
+	protected $password;
 
 
 	/**
@@ -104,39 +104,17 @@ class Url {
 	 */
 	protected $fragment = '';
 
-
-	/**
-	 * Constructor
-	 *
-	 * @param array $options the options for this instance
-	 * 
-	 */
-	
-	public function __construct($parts = [])
+	private static function parsePath(string $path) : array
 	{
-		$parts = array_merge([
-			'scheme'   => 'http',
-			'host'     => 'localhost',
-			'port'     => null,
-			'user'     => '',
-			'pass'     => '',
-			'path'     => '',
-			'query'    => '',
-			'fragment' => ''
-		], $parts);
+		return explode('/',  trim($path, "\t\n /"));
+	}
 
-		if (empty($parts['scheme']) || empty($parts['host'])) {
-			throw new InvalidArgumentException('Scheme and/or host are required parts by every url');
-		}
+	private static function parseQuery(string $query) : array
+	{
+		$queryArray = [];
+		parse_str($query, $queryArray);
 
-		$this->setScheme($parts['scheme']);
-		$this->setUser($parts['user']);
-		$this->setPassword($parts['pass']);
-		$this->setHost($parts['host']);
-		$this->setPort($parts['port']);
-		$this->setPath($parts['path']);
-		$this->setQuery($parts['query']);
-		$this->setFragment($parts['fragment']);
+		return $queryArray;
 	}
 
 	/**
@@ -173,114 +151,297 @@ class Url {
 		return new static($parts);
 	}
 
-	public function setScheme(string $scheme, $autoPort = true)
-	{
-		$this->scheme = $scheme;
 
-		if ($autoPort && $port = self::SCHEME_PORT_MAP[$scheme] ?? null) {
-			$this->setPort($port);
+	/**
+	 * Constructor
+	 *
+	 * @param array $options the options for this instance
+	 * 
+	 */
+	
+	public function __construct($parts = [])
+	{
+		if (isset($parts['password'])) {
+			$parts['pass'] = $parts['password'];
 		}
 
-		return $this;
+		$parts = array_merge([
+			'scheme'   => 'http',
+			'host'     => 'localhost',
+			'port'     => null,
+			'user'     => null,
+			'pass'     => null,
+			'path'     => '',
+			'query'    => '',
+			'fragment' => null
+		], $parts);
+
+		if (empty($parts['scheme']) || empty($parts['host'])) {
+			throw new InvalidArgumentException('Scheme and/or host are required parts by every url');
+		}
+
+		$this->scheme   = $parts['scheme'];
+		$this->user     = $parts['user'];
+		$this->password = $parts['pass'];
+		$this->host     = $parts['host'];
+		$this->port     = $parts['port'] ?: null;
+		$this->path     = self::parsePath($parts['path']);
+		$this->query    = self::parseQuery($parts['query']);
+		$this->fragment = $parts['fragment'];
 	}
 
-	public function getScheme() : string
+	public function withScheme(string $scheme, $autoPort = true) : Url
+	{
+		$url = clone $this;
+
+		$url->scheme = $scheme;
+
+		if ($autoPort && $port = self::SCHEME_PORT_MAP[$scheme] ?? null) {
+			$url->port = $port;
+		}
+
+		return $url;
+	}
+
+	public function scheme() : string
 	{
 		return $this->scheme;
 	}
 
-	public function setUser(string $user = null)
+	public function withUser(string $user = null) : Url
 	{
-		$this->user = $user;
+		if (is_string($user) && '' === trim($user)) {
+			$user = null;
+		}
+
+		$url = clone $this;
+		$url->user = $user;
 
 		// Unset password when user is unset
 		if (null === $user) {
-			$this->setPassword(null);
+			$url->password = null;
 		}
 
-		return $this;
+		return $url;
 	}
 
-	public function getUser() :? string 
+	public function user() :? string 
 	{
 		return $this->user;
 	}
 
-	public function setPassword(string $password = null) :? string
+	public function withPassword(string $password = null) : Url
 	{
-		$this->pass = $password;
-		return $this;
+		if (null === $this->user) {
+			throw new LogicException('Can\'t set password without username. Set username first!');
+		}
+
+		if (is_string($password) && '' === trim($password)) {
+			$password = null;
+		}
+
+		$url = clone $this;
+		$url->pass = $password;
+
+		return $url;
 	}
 
-	public function getPassword()
+	public function password() :? string
 	{
-		return $this->pass;
+		return $this->password;
 	}
 
-	public function setHost($host)
+	public function withUserAndPassword(string $user = null, string $password = null) : Url
 	{
-		$this->host = $host;
-		return $this;
+		if (is_string($user) && '' === trim($user)) {
+			$user = null;
+		}
+
+		if (null === $user || (is_string($password) && '' === trim($password))) {
+			$password = null;
+		}
+
+		$url = clone $this;
+		$url->user = $user;
+		$url->password = $password;
+
+		return $url;
 	}
 
-	public function getHost()
+	public function withHost(string $host = null) : Url
+	{
+		$url = clone $this;
+		$url->host = $host;
+
+		return $url;
+	}
+
+	public function host() :? string
 	{
 		return $this->host;
 	}
 
-	public function setPort(int $port = null, $autoScheme = true)
+	public function withPort(int $port = null, bool $autoScheme = true) : Url
 	{
+		$url = clone $this;
+
 		if (null === $port && $autoScheme) {
-			$scheme = $this->getScheme();
+			$scheme = $this->scheme();
 			if (false === $port = array_search($scheme, self::PORT_SCHEME_MAP)) {
 				$port = null;
 			}
 		}
 
-		$this->port = $port;
-		return $this;
+		$url->port = $port;
+
+		return $url;
 	}
 
-	public function getPort() :? int
+	public function port() :? int
 	{
 		return $this->port;
 	}
 
-	public function setQuery($query, bool $append = false)
+
+	/**
+	 * Sets the URL path (file)
+	 *
+	 * @param string $path The path
+	 *
+	 * @return self
+	 * 
+	 */
+	
+	public function withPath($path)
 	{
-		if (is_string($query)) {
-			$queryArray = [];
-			parse_str($query, $queryArray);
-			$query = $queryArray;
+		$url = clone $this;
+
+		if (is_string($path)) {
+			$url->path = self::parsePath($path);
+			return $url;
 		}
 
-		if (!is_array($query)) {
-			$query = (array) $query;
+		if (is_array($path)) {
+			$url->path = array_values($path);
+			return $url;
 		}
 
-		$this->query = $append ? array_merge($this->query, $query) : $query;
-
-		return $this;
+		throw new InvalidArgumentException(sprintf(
+			'Can\'t resolve path from given argument of type %s, use string or array instead.',
+			is_object($query) ? get_class($query) : gettype($query)
+		));
 	}
 
-	public function appendQuery($query)
+	public function withPathPrepend($path)
 	{
-		return $this->setQuery($query, true);
+		$url = clone $this;
+
+		if (is_string($path)) {
+			$url->path = array_merge(self::parsePath($path), $url->path);
+			return $url;
+		}
+
+		if (is_array($path)) {
+			$url->path = array_merge(array_values($path), $url->path);
+			return $url;
+		}
+
+		throw new InvalidArgumentException(sprintf(
+			'Can\'t resolve path from given argument of type %s, use string or array instead.',
+			is_object($query) ? get_class($query) : gettype($query)
+		));
 	}
 
-	public function getQuery()
+	public function withPathAppend($path)
 	{
-		return http_build_query($this->query);
+		$url = clone $this;
+
+		if (is_string($path)) {
+			$url->path = array_merge($url->path, self::parsePath($path));
+			return $url;
+		}
+
+		if (is_array($path)) {
+			$url->path = array_merge($url->path, array_values($path));
+			return $url;
+		}
+
+		throw new InvalidArgumentException(sprintf(
+			'Can\'t resolve path from given argument of type %s, use string or array instead.',
+			is_object($query) ? get_class($query) : gettype($query)
+		));
 	}
 
-	public function setFragment($fragment)
+	/**
+	 * Gets the full path of the url by default with file.
+	 *
+	 * @param  boolean $withFile Whether to append the file or not
+	 *
+	 * @return string
+	 * 
+	 */
+	
+	public function path() : string
 	{
-		$this->fragment = $fragment ?: '';
+		return implode('/', $this->path); 
 	}
 
-	public function getFragment()
+	public function pathArray() : array
 	{
-		return $this->fragment;
+		return $this->path;
+	}
+
+
+	/**
+	 * Gets the n'th path partial or null if the given offset is not set
+	 *
+	 * @param  integer $offset The offset to look for
+	 *
+	 * @return string|null
+	 * 
+	 */
+	
+	public function nth(int $offset) :? string
+	{
+		return $this->path[$offset] ?? null;
+	}
+
+
+	/**
+	 * Gets the first path partial
+	 *
+	 * @return string
+	 * 
+	 */
+	
+	public function first() :? string
+	{
+		return $this->nth(0);
+	}
+
+	/**
+	 * Gets the last path partial
+	 *
+	 * @return string|null
+	 * 
+	 */
+	
+	public function last() :? string
+	{
+		return empty($this->path) ? null : end($this->path);
+	}
+
+
+	/**
+	 * Gets the mumber of partials in the path
+	 *
+	 * @return integer
+	 * 
+	 */
+	
+	public function length() : int
+	{
+		return sizeof($this->path);
 	}
 
 
@@ -295,129 +456,104 @@ class Url {
 	
 	public function test(string $pattern) : bool
 	{
-		return preg_match($pattern, $this->getPath()) === 1;
+		return preg_match($pattern, $this->path()) === 1;
 	}
 
 
-	/**
-	 * Sets the URL path (file)
-	 *
-	 * @param string $path The path
-	 *
-	 * @return self
-	 * 
-	 */
-	
-	public function setPath($path)
+	public function withQueryString(string $query, bool $merge = false) : Url
 	{
-		if (is_string($path)) {
-			$path = trim($path, '/');
+		return $this->withQueryArray(
+			self::parseQuery($query)
+		);
+	}
 
-			if (false !== $pos = strpos($path, '?')) {
-				$this->setQuery(substr($path, $pos + 1));
-				$path = substr($path, 0, $pos);
-			}
+	public function withQueryArray(array $query, bool $merge = false) : Url
+	{
+			$url = clone $this;
+			$url->query = $merge ? array_merge($this->query, $query) : $query;
 
-			$partials = array_filter(explode('/', $path));
+			return $url;
+	}
 
-			if (false !== strpos(end($partials), '.')) {
-				$this->setFile(array_pop($partials));
-			}	
+	public function withQuery($query, bool $merge = false) : Url
+	{
+		if (is_string($query)) {
+			return $this->withQueryString($query, $merge);
 		}
 
-		$this->partials = $partials;
-
-		return $this;
-	}
-
-	/**
-	 * Gets the full path of the url by default with file.
-	 *
-	 * @param  boolean $withFile Whether to append the file or not
-	 *
-	 * @return string
-	 * 
-	 */
-	
-	public function getPath(bool $withFile = true) : string
-	{
-		$partials = $this->partials;
-		
-		if ($withFile && $file = $this->getFile()) {
-			$partials[] = $file;
+		if (is_array($query)) {
+			return $this->withQueryArray($query, $merge);
 		}
 
-		return implode('/', $partials); 
+		throw new InvalidArgumentException(sprintf(
+			'Can\'t resolve query from given argument of type %s, use string or array instead.',
+			is_object($query) ? get_class($query) : gettype($query)
+		));
 	}
 
-	public function setFile($file)
+	public function withMergedQuery($query) : Url
 	{
-		$this->file = $file;
-		return $this;
+		return $this->withQuery($query, true);
 	}
 
-
-	/**
-	 * Gets the file of the URL if one is set
-	 *
-	 * @return string
-	 * 
-	 */
-	
-	public function getFile()
+	public function queryArray() : array
 	{
-		return $this->file;
+		return $this->query;
 	}
 
-
-	/**
-	 * Gets the n'th path partial or null if the given offset is not set
-	 *
-	 * @param  integer $offset The offset to look for
-	 *
-	 * @return string|null
-	 * 
-	 */
-	
-	public function nth($offset)
+	public function query()
 	{
-		return isset($this->partials[$offset]) ? $this->partials[$offset] : null;
+		return http_build_query($this->query);
 	}
 
-
-	/**
-	 * Gets the first path partial
-	 *
-	 * @return string
-	 * 
-	 */
-	
-	public function first() {
-		return $this->nth(0);
-	}
-
-	/**
-	 * Gets the last path partial
-	 *
-	 * @return string
-	 * 
-	 */
-	
-	public function last() {
-		return end($this->partials);
-	}
-
-
-	/**
-	 * Gets the mumber of partials in the path
-	 *
-	 * @return integer
-	 * 
-	 */
-	
-	public function length()
+	public function withFragment(string $fragment = null) : Url
 	{
-		return sizeof($this->partials);
+		$url = clone $this;
+		$url->fragment = $fragment;
+
+		return $url;
+	}
+
+	public function fragment()
+	{
+		return $this->fragment;
+	}
+
+
+	public function toString(bool $pathOnly = false)
+	{
+		$path = rtrim(sprintf('%s?%s#%s', 
+			$this->path(), 
+			$this->query(), 
+			$this->fragment()), '?#');
+
+		if ($pathOnly) {
+			return $path;
+		}
+
+		$scheme = $this->scheme();
+
+		// Combine user and password
+		$credentials = $this->user ? ($this->password ? $this->user . ':' . $this->password . '@' : $this->user . '@') : '';
+		$host = $this->host();
+		$port = $this->port();
+		// Don't use the port if its the standard for the current scheme
+		if ($port !== null && isset(self::PORT_SCHEME_MAP[$port]) && self::PORT_SCHEME_MAP[$port] == $scheme) {
+			$port = null;
+		}
+
+		return rtrim(sprintf('%s://%s%s%s/%s',
+			// Scheme
+			$scheme,
+			// Credentials
+			$credentials,
+			// Host
+			$host,
+			// Port
+			is_null($port) ? '' : ':' . $port ,
+			// Path
+			$path
+		), '/');
 	}
 
 
@@ -430,34 +566,6 @@ class Url {
 	
 	public function __toString()
 	{
-		$scheme = $this->getScheme();
-		// Combine user and password
-		$credentials = $this->user ? ($this->pass ? $this->user . ':' . $this->pass . '@' : $this->user . '@') : '';
-		$host = $this->getHost();
-		$port = $this->getPort();
-		// Don't use the port if its the standard for the current scheme
-		if ($port !== null && isset(self::PORT_SCHEME_MAP[$port]) && self::PORT_SCHEME_MAP[$port] == $scheme) {
-			$port = null;
-		}
-		$path = $this->getPath();
-		$query = $this->getQuery();
-		$fragment = $this->getFragment();
-
-		return rtrim(sprintf('%s://%s%s%s/%s%s%s',
-			// Scheme
-			$scheme,
-			// Credentials
-			$credentials,
-			// Host
-			$host,
-			// Port
-			is_null($port) ? '' : ':' . $port ,
-			// Path
-			$path,
-			// Query
-			$query ? '?' . $query : '',
-			// Fragment
-			$fragment ? '#' . $fragment : ''
-		), '/');
+		return $this->toString();
 	}
 }

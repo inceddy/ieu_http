@@ -170,7 +170,7 @@ class Route {
 	public function parse(Url $url) :? array
 	{
 		// Get path without possible file
-		$path = $url->getPath(false);
+		$path = $url->path();
 
 		// Build route pattern
 		$pattern = $this->buildRoutePattern();
