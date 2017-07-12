@@ -292,13 +292,15 @@ class RoutingContext {
 	 * @param  ieu\Http\Router $router
 	 *    The router invoking this context
 	 *
-	 * @return void
+	 * @return self
 	 */
 	
-	public function __invoke(Router $router)
+	public function __invoke(Router $router) : RoutingContext
 	{
 		if ($this->invoker) {
 			($this->invoker)($router);
 		}
+
+		return $this;
 	}
 }

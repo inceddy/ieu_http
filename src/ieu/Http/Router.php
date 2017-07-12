@@ -325,27 +325,30 @@ class Router {
 
 	private function handleContext(Request $request, RoutingContext $context) :? Response
 	{
-		$this->currentContext = $context;
-
-		$url = $request->getUrl();
-		$path = $url->path();
-		$prefix = $this->currentContext->getPrefixedPath();
+		$url    = $request->getUrl();
+		$path   = $url->path();
+		$prefix = $context->getPrefixedPath();
 
 		// Early return if context prefix does not match current path
 		if ($prefix && strpos($url->path(), $prefix) !== 0) {
 			return null;
 		}
 
-		// Invoke context
-		($this->currentContext)($this);
+		// Save current context to restore it after this context is handled
+		$prevContext = $this->currentContext;
 
+		// Set new current context and invoke it
+		$this->currentContext = $context($this);
+
+
+		// Check if any sub context wants to handle the request 
 		foreach ($this->currentContext->getSubContexts() as $subContext) {
-			if (null !== $subResult = $this->handleContext($request, $subContext)) {
+			if ($subResult = $this->handleContext($request, $subContext)) {
 				return $subResult;
 			}
 		}
 
-		
+		// Holds any exception caught during route handling
 		$error = null;
 
 		// Handle routes
@@ -397,6 +400,9 @@ class Router {
 
 			return $this->resultToResponse($result);
 		}
+
+		// Restore context
+		$this->currentContext = $prevContext;
 
 		return null;
 	}
