@@ -121,6 +121,7 @@ class UrlTest extends \PHPUnit_Framework_TestCase {
 
 	public function testPath()
 	{
+		// Access url path
 		$url = Url::from('https://example.com/some/path/long');
 		$this->assertTrue($url->test('/^some\/path/'));
 
@@ -132,11 +133,13 @@ class UrlTest extends \PHPUnit_Framework_TestCase {
 
 		$this->assertEquals(3, $url->length());
 
-		$this->assertEquals('some/path/long', $urlObject->path());
+		$this->assertEquals('some/path/long', $url->path());
 
-		$this->assertEquals(['some', 'path', 'long'], $urlObject->pathArray());
+		$this->assertEquals(['some', 'path', 'long'], $url->pathArray());
 
 
+		
+		// Modify url path
 		$url = 'https://example.com/some/path/long';
 
 		$this->assertEquals('https://example.com/some/path', (string)Url::from($url)->withPath('some/path'));

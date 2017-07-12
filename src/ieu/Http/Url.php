@@ -520,14 +520,14 @@ class Url {
 	}
 
 
-	public function toString(bool $pathOnly = false)
+	public function toString(bool $withoutHost = false)
 	{
 		$path = rtrim(sprintf('%s?%s#%s', 
 			$this->path(), 
 			$this->query(), 
 			$this->fragment()), '?#');
 
-		if ($pathOnly) {
+		if ($withoutHost) {
 			return $path;
 		}
 
