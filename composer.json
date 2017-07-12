@@ -3,7 +3,7 @@
     "description": "Lib for handling http requests and responses",
     "type": "",
     "license": "MIT",
-    "version": "2.0.1",
+    "version": "2.0.3",
     "authors": [
         {
             "name": "Philipp Steingrebe",
