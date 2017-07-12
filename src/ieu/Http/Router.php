@@ -11,8 +11,7 @@
 
 namespace ieu\Http;
 
-use ieu\Container\Provider;
-use LogicException;
+use InvalidArgumentException;
 use Exception;
 use Closure;
 
@@ -22,40 +21,19 @@ use Closure;
 
 class Router {
 
-	protected const ROUTES            = 0;
-	protected const PREFIX            = 1;
-	protected const MIDDLEWARE        = 2;
-	protected const DEFAULT           = 3;
-	protected const PARAMETER_PATTERN = 4;
-	protected const CONTEXT_HANDLER   = 5;
-
 	/**
-	 * The current request handled by this router
-	 * @var ieu\Reuqest
+	 * Root routing context
+	 * @var ieu\Http\RoutingContext
 	 */
 
-	protected $request;
+	protected $rootContext;
 
 
 	/**
-	 * All handler routes bundles attachte to this router
-	 * @var array<array<callable, array<ieu\Http\Route>>> 
+	 * Current routing context
+	 * @var ieu\Http\RoutingContext
 	 */
 
-
-	/**
-	 * Router context
-	 * @var array
-	 */
-
-	protected $context = [];
-
-
-	/**
-	 * Reference on the current context
-	 * @var array
-	 */
-	
 	protected $currentContext;
 
 
@@ -63,93 +41,54 @@ class Router {
 	 * Constructor
 	 * Invokes a new router object
 	 *
-	 * @param Request $request  
-	 *    The request handled by this router
-	 *
 	 * @return self
-	 * 
 	 */
 	
-	public function __construct(Request $request)
+	public function __construct()
 	{
-		$this->request = $request;
-		$this->addContext();
-		$this->currentContext = &$this->context[0];
-	}
-
-	protected function addContext(Closure $handler = null)
-	{
-		$this->context[] = [
-			self::ROUTES            => [],
-			self::MIDDLEWARE        => [],
-			self::PREFIX            => null,
-			self::DEFAULT           => null,
-			self::PARAMETER_PATTERN => [],
-			self::CONTEXT_HANDLER   => $handler
-		];
-
-		return $this->context[sizeof($this->context) - 1];
+		$this->rootContext =
+		$this->currentContext = new RoutingContext;
 	}
 
 
 	/**
-	 * Sets the request which is handled by this router
+	 * Adds a new routing context
 	 *
-	 * @param Request $request  The request to handle
+	 * @param  string $prefix
+	 *    The path prefix for this context
+	 *
+	 * @param Closure $invoker
+	 *    The closure invoking this context
 	 *
 	 * @return self
-	 * 
 	 */
 	
-	public function setRequest(Request $request)
-	{
-		$this->request = $request;
+	public function context(string $prefix, $invoker) {
 
-		return $this;
-	}
-
-
-	/**
-	 * Gets the request handled by this router
-	 *
-	 * @return ieu\Http\Request  The request
-	 * 
-	 */
-	
-	public function getRequest()
-	{
-		return $this->request;
-	}
-
-	public function context($handler) {
-		if (!$handler instanceof Closure) {
-			throw new InvalidArgumentException('Context handler must be instance of Closure.');
+		if (!$invoker instanceof Closure) {
+			throw new InvalidArgumentException('Context invoker must be instance of Closure.');
 		}
 
-		// Add new group context
-		$this->addContext(Closure::bind($handler, $this));
-		return $this;
-	}
+		$this->currentContext->addSubContext($prefix, $invoker);
 
-	public function middleware(...$middlewares)
-	{
-		$this->currentContext[self::MIDDLEWARE] = array_merge($this->currentContext[self::MIDDLEWARE], $middlewares);
 		return $this;
 	}
 
 	/**
-	 * Add path prefix to current context
-	 * e.g. `custom/prefix
+	 * Adds middleware to the current context
 	 *
-	 * @param  string $prefix 
-	 *    The path prefix
+	 * @param array $middlewares
+	 *    The middlewares to ad
 	 *
 	 * @return self
 	 */
 	
-	public function prefix(string $prefix) 
+	public function middleware(...$middlewares) 
 	{
-		$this->currentContext[self::PREFIX] = trim($prefix, "/\n\t ");
+		foreach ($middlewares as $middleware) {
+			$this->currentContext->addMiddleware($middleware);
+		}
+
 		return $this;
 	}
 
@@ -157,8 +96,10 @@ class Router {
 	/**
 	 * Add new route to current context
 	 *
-	 * @param  Route  $route 
+	 * @param  ieu\Http\Route  $route 
 	 *    The route to add
+	 * @param  callable $handler
+	 *    The route handler
 	 *
 	 * @return self
 	 */
@@ -169,41 +110,117 @@ class Router {
 			throw new Exception('Route handler must be callable.');
 		}
 
-		$this->currentContext[self::ROUTES][] = [$route, $handler];
+		$this->currentContext->addRoute($route, $handler);
 		return $this;
 	}
 
-
+	/**
+	 * Adds a new route with given path to the current context
+	 * that accepts the given methods requests.
+	 *
+	 * @param string $path
+	 *    The route path
+	 * @param int $methods
+	 *    The accepted route methods 
+	 * @param callable $handler
+	 *    The route handler
+	 *
+	 * @return self
+	 */
+	
 	public function request(string $path, int $methods, $handler)
 	{
-		$path = trim($path, "/\n\t ");
-
-		if (null !== $prefix = $this->currentContext[self::PREFIX]) {
-			$path = $prefix . '/' . $path;
-		}
+		$path = $this->currentContext->getPrefixedPath(
+			trim($path, "\n\r\t/ ")
+		);
 
 		return $this->route(new Route($path, $methods), $handler);
 	}
+
+
+	/**
+	 * Adds a new route with given path to the current context
+	 * that accepts GET and HEAD requests.
+	 *
+	 * @param string $path
+	 *    The route path
+	 * @param callable $handler
+	 *    The route handler
+	 *
+	 * @return self
+	 */
 
 	public function get(string $path, $handler)
 	{
 		return $this->request($path, Request::HTTP_GET | Request::HTTP_HEAD, $handler);
 	}
 
+
+	/**
+	 * Adds a new route with given path to the current context
+	 * that accepts POST requests.
+	 *
+	 * @param string $path
+	 *    The route path
+	 * @param callable $handler
+	 *    The route handler
+	 *
+	 * @return self
+	 */
+
 	public function post(string $path, $handler)
 	{
 		return $this->request($path, Request::HTTP_POST, $handler);
 	}
+
+
+	/**
+	 * Adds a new route with given path to the current context
+	 * that accepts PUT requests.
+	 *
+	 * @param string $path
+	 *    The route path
+	 * @param callable $handler
+	 *    The route handler
+	 *
+	 * @return self
+	 */
 
 	public function put(string $path, $handler)
 	{
 		return $this->request($path, Request::HTTP_PUT, $handler);
 	}
 
+
+	/**
+	 * Adds a new route with given path to the current context
+	 * that accepts DELETE requests.
+	 *
+	 * @param string $path
+	 *    The route path
+	 * @param callable $handler
+	 *    The route handler
+	 *
+	 * @return self
+	 */
+
 	public function delete(string $path, $handler)
 	{
 		return $this->request($path, Request::HTTP_DELETE, $handler);
 	}
+
+
+	/**
+	 * Adds a new route with given path to the current context
+	 * that accepts all requests.
+	 *
+	 * @param string $path
+	 *    The route path
+	 * @param callable $handler
+	 *    The route handler
+	 *
+	 * @return self
+	 */
 
 	public function any(string $path, $handler)
 	{
@@ -222,9 +239,9 @@ class Router {
 	 * @return self
 	 */
 	
-	public function validate($name, $pattern)
+	public function validate(string $name, string $pattern)
 	{
-		$this->currentContext[self::PARAMETER_PATTERN][$name] = $pattern;
+		$this->currentContext->addPattern($name, $pattern);
 		return $this;
 	}
 
@@ -242,10 +259,21 @@ class Router {
 	
 	public function otherwise($defaultHandler)
 	{
-		$this->currentContext[self::DEFAULT] = $defaultHandler;
+		$this->currentContext->setDefault($defaultHandler);
 		return $this;
 	}
 
+	/**
+	 * Get a chain of middlewares that pre process 
+	 * arguments before entering the current route handler
+	 *
+	 * @param array $middlewares
+	 *    The middlewares to compose
+	 *
+	 * @return Closure
+	 *    The middleware chain
+	 */
+	
 	private function composeMiddleware(array $middlewares)
 	{
 		$curryedMiddlewares = array_map(function($middleware) {
@@ -269,7 +297,7 @@ class Router {
 	}
 
 	/**
-	 * Transforms any primitive handler result to a response
+	 * Transforms any skalar handler result to a ieu\Http\Response object
 	 *
 	 * @param  mixed $result
 	 *    The handler result to be transformed
@@ -278,7 +306,7 @@ class Router {
 	 *    The response
 	 */
 	
-	private function resultToResponse($result)
+	private function resultToResponse($result) : Response
 	{
 		switch (true) {
 			// Response object
@@ -295,91 +323,111 @@ class Router {
 		}
 	}
 
+	private function handleContext(Request $request, RoutingContext $context) :? Response
+	{
+		$this->currentContext = $context;
+
+		$url = $request->getUrl();
+		$path = $url->path();
+		$prefix = $this->currentContext->getPrefixedPath();
+
+		// Early return if context prefix does not match current path
+		if ($prefix && strpos($url->path(), $prefix) !== 0) {
+			return null;
+		}
+
+		// Invoke context
+		($this->currentContext)($this);
+
+		foreach ($this->currentContext->getSubContexts() as $subContext) {
+			if (null !== $subResult = $this->handleContext($request, $subContext)) {
+				return $subResult;
+			}
+		}
+
+		
+		$error = null;
+
+		// Handle routes
+		foreach ($this->currentContext->getRoutes() as $routeAndHandler) {
+			list($route, $handler) = $routeAndHandler;
+
+			// Test for method (eg. HTTP_GET, HTTP_POST, ...)
+			if (!$request->isMethod($route->getMethods())) {
+				continue;
+			}
+
+			// Prefix route
+			$route->setPrefix($prefix);
+
+			// Test for local pattern
+			if (null === $parameter = $route->parse($url)) {
+				continue;
+			}
+
+			// Test for global pattern
+			foreach (array_intersect_key($this->currentContext->getPattern(), $parameter) as $name => $pattern) {
+				if (0 === preg_match($pattern , $parameter[$name])) {
+					continue 2;
+				}
+			}
+			
+			// Execute route handler
+			try {
+				$result = $this->composeMiddleware($this->currentContext->getMiddlewares())($handler)($request, $parameter);
+
+				// Call next handler if `null` was returned
+				if (null === $result) {
+					continue;
+				}
+
+				return $this->resultToResponse($result);
+
+			} catch(Exception $e) {
+				$error = $e;
+				break;
+			}
+		}
+
+		// Use context default handler to handle errors occured
+		if ($error && $defaultHandler = $this->currentContext->getDefault()) {
+			if (null === $result = call_user_func($defaultHandler, $request, $error)) {
+				throw $error;
+			}
+
+			return $this->resultToResponse($result);
+		}
+
+		return null;
+	}
+
+
 	/**
 	 * Trys to match a route against the current request.
 	 *
 	 * @throws \Exception
 	 *    If no route matches the request
 	 *
-	 * @return \ieu\Http\Response
+	 * @param ieu\Http\Request $request
+	 *    The request to be handled
+	 *
+	 * @return ieu\Http\Response
 	 *    The response of the matching handler
 	 * 
 	 */
 	
-	public function handle() 
+	public function handle(Request $request) : Response
 	{
-		// Exception caught while handling the routes
-		$error = null;
-
-		// Loop over all context
-		foreach ($this->context as $contextIndex => &$context) {
-			$this->currentContext = &$context;
-
-			// Invoke context
-			if (null !== $invoker = $context[self::CONTEXT_HANDLER]) {
-				$invoker();
-			}
-
-			foreach ($context[self::ROUTES] as $routeAndHandler) {
-				list($route, $handler) = $routeAndHandler;
-
-				// Test for method (eg. HTTP_GET, HTTP_POST, ...)
-				if (!$this->request->isMethod($route->getMethods())) {
-					continue;
-				}
-
-
-				// Test for local pattern
-				if (null === $parameter = $route->parse($this->request->getUrl())) {
-					continue;
-				}
-
-				// Test for global pattern
-				foreach (array_intersect_key($context[self::PARAMETER_PATTERN], $parameter) as $name => $pattern) {
-					if (0 === preg_match($pattern , $parameter[$name])) {
-						continue 2;
-					}
-				}
-				
-				// Execute route handler
-				try {
-					$result = $this->composeMiddleware($context[self::MIDDLEWARE])($handler)($this->request, $parameter);
-
-					// Call next handler if `null` was returned
-					if (null === $result) {
-						continue;
-					}
-
-					return $this->resultToResponse($result);
-
-				} catch(Exception $e) {
-					$error = $e;
-					break 2;
-				}
-			}
-
-			// Use context default handler
-			if ($contextIndex > 0 && isset($context[self::DEFAULT])) {
-				if (null === $result = call_user_func($context[self::DEFAULT], $this->request, $error)) {
-					continue;
-				}
-
-				return $this->resultToResponse($result);
-			}
+		if ($result = $this->handleContext($request, $this->rootContext)) {
+			return $result;
 		}
-
-		// Use default context default handler
-		if (isset($this->context[0][self::DEFAULT])) {
+		
+		if ($defaultHandler = $this->rootContext->getDefault()) {
 			return $this->resultToResponse(
-				call_user_func($this->context[0][self::DEFAULT], $this->request, $error)
+				call_user_func($defaultHandler, $request, null)
 			);
 		}
-
-		// If no handler takes
-		if (null !== $error) {
-			throw $error;
-		}
-
-		throw new Exception('No matching route found. Set a default handler to catch this case.');
+		
+		throw new Exception('No matching route found. Set a default handler on root context to cover this case.');
 	}
 }

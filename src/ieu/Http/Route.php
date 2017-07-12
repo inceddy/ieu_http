@@ -28,6 +28,13 @@ class Route {
 
 
 	/**
+	 * Prefix for this route
+	 * @var string|null
+	 */
+	
+	protected $prefix;
+
+	/**
 	 * The route description
 	 * @var string
 	 */
@@ -81,7 +88,7 @@ class Route {
 	{
 		$route = trim($route, " \t\n\r/"); // Remove leading and tailing slashes and whitespaces
 
-		if (substr($route, -1) == '*') {
+		if ($route !== '' && substr($route, -1) == '*') {
 			$route = substr($route, 0, -1);
 			$this->setTermination(false);
 		}
@@ -116,6 +123,8 @@ class Route {
 	
 	protected function buildRoutePattern()
 	{
+		$path = $this->prefix ? rtrim($this->prefix . '/' . $this->route, '/') : $this->route;
+
 		return '~^' . preg_replace_callback(self::VAR_PATTERN, function($matches) {
 			$this->parameter[] = $key = $matches[1];
 
@@ -124,7 +133,7 @@ class Route {
 				$this->parameterPattern[$key] = $matches[2];
 			}
 			return $this->buildParameterPattern($key);
-		}, $this->route) . ($this->terminated ? '$' : '') . '~i';
+		}, $path) . ($this->terminated ? '$' : '') . '~i';
 
 	}
 
@@ -153,6 +162,17 @@ class Route {
 	public function getTermination() : bool
 	{
 		return $this->terminated;
+	}
+
+	public function setPrefix(string $prefix = null)
+	{
+		$this->prefix = $prefix;
+		return $this;
+	}
+
+	public function getPrefix() :? string
+	{
+		return $this->prefix;
 	}
 
 

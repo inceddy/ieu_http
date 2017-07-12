@@ -48,7 +48,7 @@ class RouterProviderTest extends \PHPUnit_Framework_TestCase {
 		}]);
 
 
-		$container['Router']->handle();
+		$container['Router']->handle($container->Request);
 	}
 
 	public function testDefaultHandlerAcceptsDependencies()
@@ -66,7 +66,7 @@ class RouterProviderTest extends \PHPUnit_Framework_TestCase {
 			}]);
 		}]);
 
-		$response = $container['Router']->handle();
+		$response = $container['Router']->handle($container->Request);
 
 		$this->assertInstanceOf(Response::CLASS, $response);
 	}
@@ -77,9 +77,11 @@ class RouterProviderTest extends \PHPUnit_Framework_TestCase {
 
 		$container->config(['RouterProvider', function($router) {
 			$test = $this;
-			$router->context(['TestValue', function($testValue){
+
+			$router->context('prefix', ['TestValue', function(Router $router, $testValue){
 				$this->assertEquals('test-value', $testValue);
 			}]);
+
 		}]);
 
 		$response = $container['Router'];

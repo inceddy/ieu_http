@@ -24,76 +24,77 @@ class RouterTest extends \PHPUnit_Framework_TestCase {
 
   /**
    * @expectedException        Exception
-   * @expectedExceptionMessage No matching route found. Set a default handler to catch this case.
+   * @expectedExceptionMessage No matching route found
    */
 	public function testEmptyResultLeedsToException()
 	{
 		$test = $this;
-		$router = new Router($this->request);
+		$router = new Router;
 		$router->get('prefix/test', function() use ($test) {
-		})->handle();
+		})->handle($this->request);
 	}
 
 
 	public function testRoutingGet()
 	{
 		$test = $this;
-		$router = new Router($this->request);
+		$router = new Router;
 		$router->get('prefix/test', function() use ($test) {
 			$test->assertTrue(true);
 			return 'Response!';
-		})->handle();
+		})->handle($this->request);
 	}
 
 	public function testRoutingPost()
 	{
 		$test = $this;
-		$router = new Router($this->request);
+		$router = new Router;
 		$router->post('prefix/test', function() use ($test) {
 			$test->assertTrue(true);
 			return 'Response!';
-		})->handle();
+		})->handle($this->request);
 	}
 
 	public function testRoutingRequest()
 	{
 		$test = $this;
-		$router = new Router($this->request);
+		$router = new Router;
 		$router->request('prefix/test', Request::HTTP_ALL, function() use ($test) {
 			$test->assertTrue(true);
 			return 'Response!';
-		})->handle();
+		})->handle($this->request);
 	}
 
 	public function testContext()
 	{
 		$test = $this;
-		$router = new Router($this->request);
-		$router->context(function() use ($test){
-			$this->route(new Route('prefix/test'), function() use ($test) {
+		$router = new Router;
+		$router->context('prefix', function(Router $router) use ($test) {
+			$router->get('test', function() use ($test) {
 				$test->assertTrue(true);
 				return 'Response!';
 			});
-		})->handle();
+		})->handle($this->request);
 	}
 
-	public function testPrefix()
+	public function testNestedContext()
 	{
 		$test = $this;
-		$router = new Router($this->request);
-		$router->context(function() use ($test) {
-			$this->prefix('prefix');
-			$this->get('test', function() use ($test) {
-				$test->assertTrue(true);
-				return 'Response!';
+		$router = new Router;
+		$router->context('prefix', function(Router $router) use ($test) {
+			$router->context('test', function(Router $router) use ($test) {
+				$router->get('/', function() use ($test) {
+					$test->assertTrue(true);
+					return 'Response!';
+				});
 			});
-		})->handle();
+		})->handle($this->request);
 	}
 
 	public function testMiddleware()
 	{
 		$test = $this;
-		$router = new Router($this->request);
+		$router = new Router;
 		$router
 			// Closure middleware
 			->middleware(function(Closure $next, ...$args) {
@@ -108,13 +109,33 @@ class RouterTest extends \PHPUnit_Framework_TestCase {
 				$this->assertEquals([], $params);
 				return 'Middleware Response!';
 			})
-			->handle();
+			->handle($this->request);
+	}
+
+	public function testNestedMiddleware()
+	{
+		$router = new Router;
+		$router
+			// Root context middleware
+			->middleware(new Middleware('arg1'))
+			->context('prefix', function(Router $router) {
+				$router
+					// Sub context middleware
+					->middleware(new Middleware('arg2'))
+					->get('test', function($arg1, $arg2, $request, $params) {
+							$this->assertEquals('test', $arg1);
+							$this->assertEquals('test', $arg2);
+							$this->assertInstanceOf(Request::CLASS, $request);
+							$this->assertEquals([], $params);
+							return 'Middleware Response!';
+					});
+			});
 	}
 
 	public function testDefaultHandlerOnEmptyResult()
 	{
 		$test = $this;
-		(new Router($this->request))
+		(new Router)
 			->otherwise(function() use ($test) {
 				// Default handler is called
 				$test->assertTrue(true);
@@ -124,14 +145,14 @@ class RouterTest extends \PHPUnit_Framework_TestCase {
 				// Handler gets called but has no result
 				$test->assertTrue(true);
 			})
-			->handle();
+			->handle($this->request);
 	}
 
 	public function testDefaultHandlerOnMissingMatch()
 	{
 		$test = $this;
 		$response = 
-		(new Router($this->request))
+		(new Router)
 			->otherwise(function() use ($test) {
 				// Default handler is called
 				$test->assertTrue(true);
@@ -141,7 +162,7 @@ class RouterTest extends \PHPUnit_Framework_TestCase {
 				// Handler gets called never called!
 				$test->assertTrue(false);
 			})
-			->handle();
+			->handle($this->request);
 
 		$this->assertInstanceOf(Response::CLASS, $response);
 	}
@@ -149,7 +170,7 @@ class RouterTest extends \PHPUnit_Framework_TestCase {
 	public function testDefaultHandlerOnException()
 	{
 		$test = $this;
-		(new Router($this->request))
+		(new Router)
 			->otherwise(function($request, $exception) use ($test) {
 				$test->assertInstanceOf(Exception::CLASS, $exception);
 				$test->assertEquals('Route error', $exception->getMessage());
@@ -158,6 +179,6 @@ class RouterTest extends \PHPUnit_Framework_TestCase {
 			->get('prefix/test', function() use ($test) {
 				throw new Exception('Route error');
 			})
-			->handle();
+			->handle($this->request);
 	}
 }

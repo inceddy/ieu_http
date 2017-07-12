@@ -3,7 +3,7 @@
 /*
  * This file is part of ieUtilities HTTP.
  *
- * (c) 2016 Philipp Steingrebe <development@steingrebe.de>
+ * (c) 2017 Philipp Steingrebe <development@steingrebe.de>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -56,9 +56,8 @@ class RouterProvider extends Router {
 	
 	public function __construct()
 	{
-		$this->addContext();
-		$this->currentContext = &$this->context[0];
-		$this->factory = ['Injector', 'Request', 'Container', [$this, 'factory']];
+		parent::__construct();
+		$this->factory = ['Injector', [$this, 'factory']];
 	}
 
 
@@ -66,27 +65,23 @@ class RouterProvider extends Router {
 	 * The factory method that will be uses by the injector.
 	 *
 	 * @param  Injector $injector The injector
-	 * @param  Request  $request  The request
 	 *
-	 * @return ieu\Http\Router
+	 * @return ieu\Http\RouterProvider
 	 */
 	
-	public function factory(Injector $injector, Request $request)
+	public function factory(Injector $injector)
 	{
-		$this->request   = $request;
 		$this->injector  = $injector;
 		$this->constructed = true;
 
 		return $this;
 	}
 
+
 	/**
-	 * Add new route to current context
+	 * Overload route to wrap route handler in a dependency array
 	 *
-	 * @param  Route  $route 
-	 *    The route to add
-	 *
-	 * @return self
+	 * {@inheritDoc}
 	 */
 	
 	public function route(Route $route, $handler)
@@ -99,15 +94,29 @@ class RouterProvider extends Router {
 		});
 	}
 
-	public function context($handler) {
-		return parent::context(function() use ($handler) {
+
+	/**
+	 * Overload context to wrap invoker in a dependency array
+	 *
+	 * {@inheritDoc}
+	 */
+
+	public function context(string $prefix, $invoker) 
+	{
+		return parent::context($prefix, function() use ($invoker) {
 			return $this->injector->invoke(
-				Container::getDependencyArray($handler),
-				['Router' => $this]
+				Container::getDependencyArray($handler), [], [$this]
 			);
 		});
 	}
 
+
+	/**
+	 * Overload otherwise to wrap default handlers in a dependency array
+	 *
+	 * {@inheritDoc}
+	 */
+	
 	public function otherwise($handler)
 	{
 		return parent::otherwise(function($request, $error) use ($handler) {
@@ -122,28 +131,16 @@ class RouterProvider extends Router {
 	/**
 	 * Overload handle to ensure that this method is 
 	 * only called on an instance and not on the provider.
-	 *
-	 * @return mixed
+	 * 
+	 * {@inheritDoc}
 	 */
 	
-	public function handle() {
+	public function handle(Request $request) : Response
+	{
 		if (!$this->constructed) {
 			throw new LogicException('You cant call handle in config state.');
 		}
 
-		return parent::handle();
-	}
-
-
-	/**
-	 * This method should be used to access the container 
-	 * in a context closure.
-	 *
-	 * @return ieu\Container\Container
-	 */
-
-	public function getContainer() :? Container
-	{
-		return $this->container;
+		return parent::handle($request);
 	}
 }
